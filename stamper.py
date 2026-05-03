@@ -44,7 +44,11 @@ class StamperApp(ctk.CTk):
   LABEL_FONT = (FONT_FAMILY, 18)
   BUTTON_FONT = (FONT_FAMILY, 14, "bold")
   PAD_X = 14  # X-axis padding.
-  PAD_Y = 14   # Y-axis padding.
+  PAD_Y = 14  # Y-axis padding.
+  STAMP = None
+  THRESHOLD = None
+  MARGFIN = None
+
 
   def __init__(self):
     """Initialize the application window and build the UI layout."""
@@ -79,6 +83,7 @@ class StamperApp(ctk.CTk):
 
 
   def set_app_icon(self):
+    """Sets the app icon."""
     try:
       # Obtain path to icon and set it.
       icon_path = get_resource_path("icon.png")
@@ -97,6 +102,7 @@ class StamperApp(ctk.CTk):
     except (FileNotFoundError, AttributeError):
       # App icon cant be found, ignore and leave default icon.
       pass
+
 
   def create_settings_section(self):
     """Create the Directory section of the UI."""
@@ -179,15 +185,17 @@ class StamperApp(ctk.CTk):
     self.threshold_entry.insert(0, 1)
     self.margin_entry.insert(0, 20)
 
+
   def start_stamper(self):
+    """Starts the stamping process"""
     self.clear_output()
     # Grab values from entries.
-    stamp_path = Path(self.stamp_path_entry.get())
+    self.STAMP = Path(self.stamp_path_entry.get())
     input_dir = Path(self.input_dir_entry.get())
     output_dir = Path(self.output_dir_entry.get().lower().strip())
     append_value = self.append_entry.get().lower().strip()
-    threshold_value = int(self.threshold_entry.get().strip())
-    margin_value = int(self.margin_entry.get().strip())
+    self.THRESHOLD = int(self.threshold_entry.get().strip())
+    self.MARGIN = int(self.margin_entry.get().strip())
 
     if (not input_dir.exists()):
       self.send_output(f"[ERROR] \'{input_dir.name}\' directory cant be found.", "error")
@@ -228,7 +236,7 @@ class StamperApp(ctk.CTk):
       output_pdf = output_dir / output_name
 
       # Add the stamp to the pdf.
-      success = self.add_stamp(stamp_path, pdf, output_pdf, threshold_value, margin_value)
+      success = self.add_stamp(pdf, output_pdf)
       if success:
         # Returned 1, there was an error. 
         error_count = error_count + 1
@@ -245,16 +253,24 @@ class StamperApp(ctk.CTk):
     self.update()  # Flush the event queue.
     self.start_btn.configure(state="normal")
 
-  def add_stamp(self, stamp_path, input_pdf, output_pdf, threshold_value, margin_value):
+
+  def add_stamp(self, input_pdf, output_pdf):
+    """
+    Adds a stamp to the pdf file.
+
+    input_pdf (Path): the input file's path.
+    output_pdf (Path): the output file's path.
+
+    """
     # Open the pdf with pymupdf.
     doc = pymupdf.open(input_pdf)
     pages_to_stamp = range(1, len(doc) + 1)
 
     try:
-      with Image.open(stamp_path) as img:
+      with Image.open(self.STAMP) as img:
         stamp_width, stamp_height = img.size
     except FileNotFoundError:
-      self.send_output(f"[Error] \'{stamp_path}\' is missing!", "error")
+      self.send_output(f"[Error] \'{self.STAMP}\' is missing!", "error")
       return 1
 
     for page_num in pages_to_stamp:
@@ -263,10 +279,10 @@ class StamperApp(ctk.CTk):
       
       # Obtain page dimensions.
       br = page.rect.br
-      x0 = br.x - stamp_width - margin_value
-      y0 = br.y - stamp_height - margin_value
-      x1 = br.x - margin_value
-      y1 = br.y - margin_value
+      x0 = br.x - stamp_width - self.MARGIN
+      y0 = br.y - stamp_height - self.MARGIN
+      x1 = br.x - self.MARGIN
+      y1 = br.y - self.MARGIN
       temp_rect = pymupdf.Rect(x0, y0, x1, y1)
 
       # CHECK FOR TEXT: search for any text inside that rectangle
@@ -276,10 +292,10 @@ class StamperApp(ctk.CTk):
       temp_y0 = y0
       temp_y1 = y1
       # Search is enabled.
-      if threshold_value > 0:
+      if self.THRESHOLD > 0:
         while text_in_rect.strip() and temp_y0 > 0:
-          temp_y0 = temp_y0 - threshold_value
-          temp_y1 = temp_y1 - threshold_value
+          temp_y0 = temp_y0 - self.THRESHOLD
+          temp_y1 = temp_y1 - self.THRESHOLD
           temp_rect = pymupdf.Rect(x0, temp_y0, x1, temp_y1)
           text_in_rect = page.get_text("text", clip=temp_rect)
       
@@ -290,11 +306,12 @@ class StamperApp(ctk.CTk):
       else:
         rect = pymupdf.Rect(x0, temp_y0, x1, temp_y1)
       
-      page.insert_image(rect, filename=stamp_path)
+      page.insert_image(rect, filename=self.STAMP)
 
     doc.save(output_pdf)
     doc.close()
     return 0
+
 
   def create_output_section(self):
     """Create the Stamper output section of the UI."""
@@ -326,12 +343,14 @@ class StamperApp(ctk.CTk):
     directory_path = filedialog.askdirectory()
     if directory_path:
       self.editLockedEntry(self.input_dir_entry, directory_path)
-  
+
+
   def browse_file(self):
     """Open a system file picker and update the stamp_path_entry field."""
     file_path = filedialog.askopenfilename()
     if file_path:
       self.editLockedEntry(self.stamp_path_entry, file_path)
+
 
   def editLockedEntry(self, entry, value):
     """
@@ -350,6 +369,7 @@ class StamperApp(ctk.CTk):
     # Lock the entry.
     entry.configure(state="readonly")
 
+
   def clear_output(self):
     """Clear the stamper_output log."""
     # Unlock the output.
@@ -360,6 +380,7 @@ class StamperApp(ctk.CTk):
 
     # Lock the output.
     self.stamper_output.configure(state="disabled")
+
 
   def send_output(self, output_message, tag=None, endl=True):
     """
@@ -386,6 +407,7 @@ class StamperApp(ctk.CTk):
 
     # Lock the output.
     self.stamper_output.configure(state="disabled")
+
 
 if __name__ == "__main__":
   app = StamperApp()
