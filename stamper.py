@@ -1,12 +1,43 @@
 import os
-import pymupdf
 import sys
+import pymupdf
 import customtkinter as ctk
 from tkinter import filedialog
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageTk
+
+
+def get_resource_path(rel_path):
+  """Get absolute path to resource for dev and PyInstaller."""
+  try:
+    base_path = sys._MEIPASS  # pylint: disable=protected-access
+  except AttributeError:
+    base_path = os.path.abspath(".")
+  return os.path.join(base_path, rel_path)
+
 
 class StamperApp(ctk.CTk):
+  """
+  A CustomTkinter-based GUI application for mass-stamping pdf files.
+
+  This class inherits from the CustomTkinter class, creates the UI layout,
+  and handles the file renaming logic with a visual progress bar.
+
+  Attributes:
+    stamp_path_entry (ctk.CTkEntry): Display, shows the selected stamp file path.
+    input_dir_entry (ctk.CTkEntry): Display, shows the selected input directory.
+    output_dir_entry (ctk.CTkEntry): Input field, the directory to output the stamped file to.
+    append_entry (ctk.CTkEntry): Input field, the string to append to the output file.
+    threshold_entry (ctk.CTkEntry): Input field, the search threshold for finding a whitespace
+        to stamp.
+    margin_entry (ctk.CTkEntry): Input field, the spacing of the stamp away from the page edges.
+    start_btn (ctk.CTkButton): Control, triggers the renaming task.
+    progress_bar (ctk.CTkProgressBar): Display, shows the progress of the task.
+    stamper_output (ctk.CTkTextbox): Display, shows the task log warnings,
+        errors, and completion messages.
+    icon (ImageTk.PhotoImage): The app icon.
+  """
+
   # App constants.
   FONT_FAMILY = "Roboto"
   SECTION_FONT = (FONT_FAMILY, 20, "bold")
@@ -23,6 +54,7 @@ class StamperApp(ctk.CTk):
     self.title("PDF Stamper")           # Set the title of the app.
     self.geometry("500x400")            # Set app size.
     self.resizable(0, 0)                # Make app unresizeable.
+    self.after(200, self.set_app_icon)  # Set the app icon.
 
     # Data storage.
     self.stamp_path_entry = None
@@ -34,6 +66,7 @@ class StamperApp(ctk.CTk):
     self.start_btn = None
     self.progress_bar = None
     self.stamper_output = None
+    self.icon = None
 
     # App creation.
     self.create_settings_section()
@@ -44,6 +77,26 @@ class StamperApp(ctk.CTk):
     self.stamper_output.tag_config("warning", foreground="#cf8b0c") # Orange
     self.stamper_output.tag_config("success", foreground="#3e9b59") # Green
 
+
+  def set_app_icon(self):
+    try:
+      # Obtain path to icon and set it.
+      icon_path = get_resource_path("icon.png")
+      if not os.path.exists(icon_path):
+        icon_path = get_resource_path(os.path.join(".assets", "app",
+                                                   "icon.png"))
+      # User is on Windows OS.
+      if sys.platform.startswith("win"):
+        ico_path = icon_path.replace(".png", ".ico")
+        self.iconbitmap(ico_path)
+      else:
+        # Not Windows OS, use a different method.
+        raw_img = Image.open(icon_path)
+        self.icon = ImageTk.PhotoImage(raw_img)
+        self.wm_iconphoto(False, self.icon)
+    except (FileNotFoundError, AttributeError):
+      # App icon cant be found, ignore and leave default icon.
+      pass
 
   def create_settings_section(self):
     """Create the Directory section of the UI."""
