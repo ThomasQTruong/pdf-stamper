@@ -4,6 +4,7 @@ from pathlib import Path
 from PIL import Image
 
 # Settings
+STAMP_PATH = "stamp.png"
 INPUT_DIRECTORY = "docs"
 OUTPUT_DIRECTORY = "output"
 APPEND_OUTPUT_NAME = ""
@@ -21,10 +22,10 @@ def add_stamp(input_pdf, output_pdf, stamp_path, pages_to_stamp=None):
   # This example places it in a 100x100 square at the top right
   
   try:
-    with Image.open("stamp.png") as img:
+    with Image.open(stamp_path) as img:
       stamp_width, stamp_height = img.size
   except FileNotFoundError:
-    print("ERROR: \'stamp.png\' is missing!")
+    print(f"ERROR: \'{stamp_path}\' is missing!")
     sys.exit(1)
 
   for page_num in pages_to_stamp:
@@ -67,7 +68,6 @@ def add_stamp(input_pdf, output_pdf, stamp_path, pages_to_stamp=None):
   doc.save(output_pdf)
   doc.close()
 
-
 def main():
   # Add the stamp to the pdf.
   directory = Path(INPUT_DIRECTORY)
@@ -86,8 +86,7 @@ def main():
     output_pdf = output_path / output_name
 
     # Add the stamp to the pdf.
-    add_stamp(pdf, output_pdf, "stamp.png")
-
+    add_stamp(pdf, output_pdf, Path(STAMP_PATH))
 
 if __name__ == "__main__":
   main()
