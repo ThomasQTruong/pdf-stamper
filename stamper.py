@@ -4,11 +4,12 @@ from pathlib import Path
 from PIL import Image
 
 # Settings
-STAMP_PATH = "stamp.png"
-INPUT_DIRECTORY = "docs"
-OUTPUT_DIRECTORY = "output"
-APPEND_OUTPUT_NAME = ""
-MARGIN = 20
+STAMP_PATH = "stamp.png"     # The path to the stamp image.
+INPUT_DIRECTORY = "docs"     # The path of the input folder.
+OUTPUT_DIRECTORY = "output"  # The path of the output folder.
+APPEND_OUTPUT_NAME = ""      # The name to append to the output file.
+SEARCH_THRESHOLD = 1         # The threshold rate for searching for a blank space.
+MARGIN = 20                  # The margin from the bottom-right edges.
 
 def add_stamp(input_pdf, output_pdf, stamp_path, pages_to_stamp=None):
   # Open the pdf with pymupdf.
@@ -50,11 +51,13 @@ def add_stamp(input_pdf, output_pdf, stamp_path, pages_to_stamp=None):
     # There is text in the way, move up.
     temp_y0 = y0
     temp_y1 = y1
-    while text_in_rect.strip() and temp_y0 > 0:
-      temp_y0 = temp_y0 - MARGIN
-      temp_y1 = temp_y1 - MARGIN
-      temp_rect = pymupdf.Rect(x0, temp_y0, x1, temp_y1)
-      text_in_rect = page.get_text("text", clip=temp_rect)
+    # Search is enabled.
+    if SEARCH_THRESHOLD > 0:
+      while text_in_rect.strip() and temp_y0 > 0:
+        temp_y0 = temp_y0 - SEARCH_THRESHOLD
+        temp_y1 = temp_y1 - SEARCH_THRESHOLD
+        temp_rect = pymupdf.Rect(x0, temp_y0, x1, temp_y1)
+        text_in_rect = page.get_text("text", clip=temp_rect)
     
     # Went out of bounds, default to bottom right.
     if temp_y0 < 0:
