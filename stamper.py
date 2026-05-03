@@ -1,4 +1,6 @@
 import pymupdf
+import sys
+from PIL import Image
 
 # Settings
 MARGIN = 20
@@ -13,8 +15,13 @@ def add_stamp(input_pdf, output_pdf, stamp_path, pages_to_stamp=None):
   
   # Define where the stamp goes (x0, y0, x1, y1)
   # This example places it in a 100x100 square at the top right
-  stamp_width = 192
-  stamp_height = 53
+  
+  try:
+    with Image.open("stamp.png") as img:
+      stamp_width, stamp_height = img.size
+  except FileNotFoundError:
+    print("ERROR: \'stamp.png\' is missing!")
+    sys.exit(1)
 
   for page_num in pages_to_stamp:
     # PDF page indices start at 0
@@ -59,7 +66,7 @@ def add_stamp(input_pdf, output_pdf, stamp_path, pages_to_stamp=None):
 
 def main():
   # Add the stamp to the pdf.
-  add_stamp("document2.pdf", "stamped_doc.pdf", "stamp.png")
+  add_stamp("document.pdf", "stamped_doc.pdf", "stamp.png")
 
 
 if __name__ == "__main__":
