@@ -50,7 +50,7 @@ def add_stamp(input_pdf, output_pdf, stamp_path, pages_to_stamp=None):
     temp_y1 = y1
     # Search is enabled.
     if SEARCH_THRESHOLD > 0:
-      while text_in_rect.strip() and temp_y0 > 0:
+      while text_in_rect.strip() and temp_y0 > MARGIN:
         temp_y0 = temp_y0 - SEARCH_THRESHOLD
         temp_y1 = temp_y1 - SEARCH_THRESHOLD
         temp_rect = pymupdf.Rect(x0, temp_y0, x1, temp_y1)

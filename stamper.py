@@ -293,7 +293,7 @@ class StamperApp(ctk.CTk):
       temp_y1 = y1
       # Search is enabled.
       if self.THRESHOLD > 0:
-        while text_in_rect.strip() and temp_y0 > 0:
+        while text_in_rect.strip() and temp_y0 > self.MARGIN:
           temp_y0 = temp_y0 - self.THRESHOLD
           temp_y1 = temp_y1 - self.THRESHOLD
           temp_rect = pymupdf.Rect(x0, temp_y0, x1, temp_y1)
