@@ -1,8 +1,12 @@
 import pymupdf
 import sys
+from pathlib import Path
 from PIL import Image
 
 # Settings
+INPUT_DIRECTORY = "docs"
+OUTPUT_DIRECTORY = "output"
+APPEND_OUTPUT_NAME = ""
 MARGIN = 20
 
 def add_stamp(input_pdf, output_pdf, stamp_path, pages_to_stamp=None):
@@ -66,7 +70,23 @@ def add_stamp(input_pdf, output_pdf, stamp_path, pages_to_stamp=None):
 
 def main():
   # Add the stamp to the pdf.
-  add_stamp("document.pdf", "stamped_doc.pdf", "stamp.png")
+  directory = Path(INPUT_DIRECTORY)
+  if (not directory.exists()):
+    print(f"ERROR: \'{directory}\' directory cant be found.")
+    sys.exit(1)
+  
+  # For each pdf in the target directory.
+  for pdf in directory.iterdir():
+    # Grab output directory and create if it doesnt exist.
+    output_path = Path(OUTPUT_DIRECTORY)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # Customize the output name.
+    output_name = pdf.stem + APPEND_OUTPUT_NAME + pdf.suffix
+    output_pdf = output_path / output_name
+
+    # Add the stamp to the pdf.
+    add_stamp(pdf, output_pdf, "stamp.png")
 
 
 if __name__ == "__main__":
