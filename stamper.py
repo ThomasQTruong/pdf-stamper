@@ -57,6 +57,9 @@ class StamperApp(ctk.CTk):
   BUTTON_FONT = (FONT_FAMILY, 14, "bold")
   PAD_X = 14  # X-axis padding.
   PAD_Y = 14  # Y-axis padding.
+  DEFAULT_INPUT_DIR = "docs"
+  DEFAULT_OUTPUT_DIR = "output"
+  DEFAULT_STAMP_PATH = "stamp.png"
 
   # App settings.
   stamp = None
@@ -212,9 +215,11 @@ class StamperApp(ctk.CTk):
     self.margin_entry.grid(row=1, column=1, sticky="nsew")
 
     # Default values.
-    self.edit_locked_entry(self.stamp_path_entry, "stamp.png")
-    self.edit_locked_entry(self.input_dir_entry, Path("docs"))
-    self.output_dir_entry.insert(0, "output")
+    self.edit_locked_entry(self.stamp_path_entry, Path.cwd()
+                           / self.DEFAULT_STAMP_PATH)
+    self.edit_locked_entry(self.input_dir_entry, Path.cwd()
+                           / self.DEFAULT_INPUT_DIR)
+    self.output_dir_entry.insert(0, Path.cwd() / self.DEFAULT_OUTPUT_DIR)
     self.threshold_entry.insert(0, 1)
     self.margin_entry.insert(0, 20)
 
