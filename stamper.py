@@ -40,8 +40,8 @@ class StamperApp(ctk.CTk):
 
   # App constants.
   FONT_FAMILY = "Roboto"
-  SECTION_FONT = (FONT_FAMILY, 20, "bold")
-  LABEL_FONT = (FONT_FAMILY, 18)
+  SECTION_FONT = (FONT_FAMILY, 18, "bold")
+  LABEL_FONT = (FONT_FAMILY, 16)
   BUTTON_FONT = (FONT_FAMILY, 14, "bold")
   PAD_X = 14  # X-axis padding.
   PAD_Y = 14  # Y-axis padding.
