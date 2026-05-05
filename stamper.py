@@ -147,36 +147,45 @@ class StamperApp(ctk.CTk):
     self.input_dir_entry.configure(state="readonly")
     self.input_dir_entry.pack(padx=(0, self.PAD_X), pady=(self.PAD_Y/2, 0), fill="x", expand=True)
     # Directory selector button.
-    dir_selector_btn = ctk.CTkButton(self, text="Select", font=self.BUTTON_FONT, command=self.browse_directory)
+    dir_selector_btn = ctk.CTkButton(self, text="Select", font=self.BUTTON_FONT,
+                                     command=self.browse_directory)
     dir_selector_btn.pack(padx=self.PAD_X, pady=(self.PAD_Y/2, 0))
 
-    # Output settings frame.
-    output_settings_frame = ctk.CTkFrame(self, fg_color="transparent")
-    output_settings_frame.pack(fill="x")
+    # Extra settings frame.
+    extra_settings_frame = ctk.CTkFrame(self, fg_color="transparent")
+    extra_settings_frame.pack(fill="x", expand=True, padx=self.PAD_X, pady=(self.PAD_Y/2, 0))
+    extra_settings_frame.grid_columnconfigure(0, weight=1)
+    extra_settings_frame.grid_columnconfigure(1, weight=1)
+    # Extra - Left frame.
+    extra_left_frame = ctk.CTkFrame(extra_settings_frame, fg_color="transparent")
+    extra_left_frame.grid(row=0, column=0, sticky="nsw", padx=(0, self.PAD_X))
+    # Extra - right frame.
+    extra_right_frame = ctk.CTkFrame(extra_settings_frame, fg_color="transparent")
+    extra_right_frame.grid(row=0, column=1, sticky="nse")
     # Output directory section.
-    output_dir_label = ctk.CTkLabel(output_settings_frame, text="Output:", font=self.LABEL_FONT)
-    output_dir_label.pack(padx=(self.PAD_X, self.PAD_X/2), pady=(self.PAD_Y/2, 0), side="left")
-    self.output_dir_entry = ctk.CTkEntry(output_settings_frame, corner_radius=0, placeholder_text="example: output")
-    self.output_dir_entry.pack(padx=(0, self.PAD_X), pady=(self.PAD_Y/2, 0), side="left", fill="x", expand=True)
+    output_dir_label = ctk.CTkLabel(extra_left_frame, text="Output:", font=self.LABEL_FONT)
+    output_dir_label.grid(row=0, column=0, sticky="nse", padx=(0, self.PAD_X/2))
+    self.output_dir_entry = ctk.CTkEntry(extra_left_frame, corner_radius=0,
+                                         placeholder_text="example: output")
+    self.output_dir_entry.grid(row=0, column=1, sticky="nsew")
     # Append section.
-    append_label = ctk.CTkLabel(output_settings_frame, text="Append:", font=self.LABEL_FONT)
-    append_label.pack(padx=(self.PAD_X, self.PAD_X/2), pady=(self.PAD_Y/2, 0), side="left")
-    self.append_entry = ctk.CTkEntry(output_settings_frame, corner_radius=0, placeholder_text="example: _stamped")
-    self.append_entry.pack(padx=(0, self.PAD_X), pady=(self.PAD_Y/2, 0), side="left", fill="x", expand=True)
-
-    # Space settings frame.
-    space_settings_frame = ctk.CTkFrame(self, fg_color="transparent")
-    space_settings_frame.pack(fill="x")
+    append_label = ctk.CTkLabel(extra_right_frame, text="Append:", font=self.LABEL_FONT)
+    append_label.grid(row=0, column=0, sticky="nse", padx=(0, self.PAD_X/2))
+    self.append_entry = ctk.CTkEntry(extra_right_frame, corner_radius=0,
+                                     placeholder_text="example: _stamped")
+    self.append_entry.grid(row=0, column=1, sticky="nsew")
     # Threshold settings section.
-    treshold_label = ctk.CTkLabel(space_settings_frame, text="Threshold:", font=self.LABEL_FONT)
-    treshold_label.pack(padx=(self.PAD_X, self.PAD_X/2), pady=(self.PAD_Y/2, 0), side="left")
-    self.threshold_entry = ctk.CTkEntry(space_settings_frame, corner_radius=0, placeholder_text="example: 0 (forced)")
-    self.threshold_entry.pack(padx=(0, self.PAD_X), pady=(self.PAD_Y/2, 0), side="left", fill="x", expand=True)
+    threshold_label = ctk.CTkLabel(extra_left_frame, text="Threshold:", font=self.LABEL_FONT)
+    threshold_label.grid(row=1, column=0, sticky="nse", padx=(0, self.PAD_X/2))
+    self.threshold_entry = ctk.CTkEntry(extra_left_frame, corner_radius=0,
+                                        placeholder_text="example: 0 (forced)")
+    self.threshold_entry.grid(row=1, column=1, sticky="nsew")
     # Margin settings section.
-    margin_label = ctk.CTkLabel(space_settings_frame, text="Margin:", font=self.LABEL_FONT)
-    margin_label.pack(padx=(self.PAD_X, self.PAD_X/2), pady=(self.PAD_Y/2, 0), side="left")
-    self.margin_entry = ctk.CTkEntry(space_settings_frame, corner_radius=0, placeholder_text="example: 20")
-    self.margin_entry.pack(padx=(0, self.PAD_X), pady=(self.PAD_Y/2, 0), side="left", fill="x", expand=True)
+    margin_label = ctk.CTkLabel(extra_right_frame, text="Margin:", font=self.LABEL_FONT)
+    margin_label.grid(row=1, column=0, sticky="nse", padx=(0, self.PAD_X/2))
+    self.margin_entry = ctk.CTkEntry(extra_right_frame, corner_radius=0,
+                                     placeholder_text="example: 20")
+    self.margin_entry.grid(row=1, column=1, sticky="nsew")
     
     # Default values.
     self.editLockedEntry(self.stamp_path_entry, "stamp.png")
