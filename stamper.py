@@ -1,3 +1,10 @@
+"""Mass stamps files in a specified folder with a specified stamp img.
+
+  This program iterates through a specified input directory and stamps
+  all files with a specified stamp file and outputs it into a specified
+  output directory.
+"""
+
 import os
 import sys
 import pymupdf
@@ -24,13 +31,18 @@ class StamperApp(ctk.CTk):
   and handles the file renaming logic with a visual progress bar.
 
   Attributes:
-    stamp_path_entry (ctk.CTkEntry): Display, shows the selected stamp file path.
-    input_dir_entry (ctk.CTkEntry): Display, shows the selected input directory.
-    output_dir_entry (ctk.CTkEntry): Input field, the directory to output the stamped file to.
-    append_entry (ctk.CTkEntry): Input field, the string to append to the output file.
-    threshold_entry (ctk.CTkEntry): Input field, the search threshold for finding a whitespace
-        to stamp.
-    margin_entry (ctk.CTkEntry): Input field, the spacing of the stamp away from the page edges.
+    stamp_path_entry (ctk.CTkEntry): Display, shows the selected stamp file
+        path (default: ./stamp.png).
+    input_dir_entry (ctk.CTkEntry): Display, shows the selected input directory
+        (default: ./docs/).
+    output_dir_entry (ctk.CTkEntry): Input field, the directory to output the
+        stamped file to (default: ./output/).
+    append_entry (ctk.CTkEntry): Input field, the string to append to the output
+        file.
+    threshold_entry (ctk.CTkEntry): Input field, the search threshold for
+        finding a whitespace to stamp (default: 1, disable = 0).
+    margin_entry (ctk.CTkEntry): Input field, the spacing of the stamp away from
+        the page edges.
     start_btn (ctk.CTkButton): Control, triggers the renaming task.
     progress_bar (ctk.CTkProgressBar): Display, shows the progress of the task.
     stamper_output (ctk.CTkTextbox): Display, shows the task log warnings,
@@ -45,9 +57,11 @@ class StamperApp(ctk.CTk):
   BUTTON_FONT = (FONT_FAMILY, 14, "bold")
   PAD_X = 14  # X-axis padding.
   PAD_Y = 14  # Y-axis padding.
-  STAMP = None
-  THRESHOLD = None
-  MARGFIN = None
+
+  # App settings.
+  stamp = None
+  threshold = None
+  margin = None
 
 
   def __init__(self):
@@ -125,10 +139,12 @@ class StamperApp(ctk.CTk):
                                        fg_color=("gray80", "gray20"))
     self.stamp_path_entry.insert(0, "No File Selected")
     self.stamp_path_entry.configure(state="readonly")
-    self.stamp_path_entry.pack(padx=(0, self.PAD_X), pady=(self.PAD_Y/2, 0), fill="x", expand=True)
+    self.stamp_path_entry.pack(padx=(0, self.PAD_X), pady=(self.PAD_Y/2, 0),
+                               fill="x", expand=True)
     # File selector button.
-    file_selector_btn = ctk.CTkButton(self, text="Select", font=self.BUTTON_FONT,
-                                     command=self.browse_file)
+    file_selector_btn = ctk.CTkButton(self, text="Select",
+                                      font=self.BUTTON_FONT,
+                                      command=self.browse_file)
     file_selector_btn.pack(padx=self.PAD_X, pady=(self.PAD_Y/2, 0))
 
     # Input directory frame.
@@ -145,7 +161,8 @@ class StamperApp(ctk.CTk):
                                        fg_color=("gray80", "gray20"))
     self.input_dir_entry.insert(0, "No Directory Selected")
     self.input_dir_entry.configure(state="readonly")
-    self.input_dir_entry.pack(padx=(0, self.PAD_X), pady=(self.PAD_Y/2, 0), fill="x", expand=True)
+    self.input_dir_entry.pack(padx=(0, self.PAD_X), pady=(self.PAD_Y/2, 0),
+                              fill="x", expand=True)
     # Directory selector button.
     dir_selector_btn = ctk.CTkButton(self, text="Select", font=self.BUTTON_FONT,
                                      command=self.browse_directory)
@@ -153,43 +170,50 @@ class StamperApp(ctk.CTk):
 
     # Extra settings frame.
     extra_settings_frame = ctk.CTkFrame(self, fg_color="transparent")
-    extra_settings_frame.pack(fill="x", expand=True, padx=self.PAD_X, pady=(self.PAD_Y/2, 0))
+    extra_settings_frame.pack(fill="x", expand=True, padx=self.PAD_X,
+                              pady=(self.PAD_Y/2, 0))
     extra_settings_frame.grid_columnconfigure(0, weight=1)
     extra_settings_frame.grid_columnconfigure(1, weight=1)
     # Extra - Left frame.
-    extra_left_frame = ctk.CTkFrame(extra_settings_frame, fg_color="transparent")
+    extra_left_frame = ctk.CTkFrame(extra_settings_frame,
+                                    fg_color="transparent")
     extra_left_frame.grid(row=0, column=0, sticky="nsw", padx=(0, self.PAD_X))
     # Extra - right frame.
-    extra_right_frame = ctk.CTkFrame(extra_settings_frame, fg_color="transparent")
+    extra_right_frame = ctk.CTkFrame(extra_settings_frame,
+                                     fg_color="transparent")
     extra_right_frame.grid(row=0, column=1, sticky="nse")
     # Output directory section.
-    output_dir_label = ctk.CTkLabel(extra_left_frame, text="Output:", font=self.LABEL_FONT)
+    output_dir_label = ctk.CTkLabel(extra_left_frame, text="Output:",
+                                    font=self.LABEL_FONT)
     output_dir_label.grid(row=0, column=0, sticky="nse", padx=(0, self.PAD_X/2))
     self.output_dir_entry = ctk.CTkEntry(extra_left_frame, corner_radius=0,
                                          placeholder_text="example: output")
     self.output_dir_entry.grid(row=0, column=1, sticky="nsew")
     # Append section.
-    append_label = ctk.CTkLabel(extra_right_frame, text="Append:", font=self.LABEL_FONT)
+    append_label = ctk.CTkLabel(extra_right_frame, text="Append:",
+                                font=self.LABEL_FONT)
     append_label.grid(row=0, column=0, sticky="nse", padx=(0, self.PAD_X/2))
     self.append_entry = ctk.CTkEntry(extra_right_frame, corner_radius=0,
                                      placeholder_text="example: _stamped")
     self.append_entry.grid(row=0, column=1, sticky="nsew")
     # Threshold settings section.
-    threshold_label = ctk.CTkLabel(extra_left_frame, text="Threshold:", font=self.LABEL_FONT)
+    threshold_label = ctk.CTkLabel(extra_left_frame, text="Threshold:",
+                                   font=self.LABEL_FONT)
     threshold_label.grid(row=1, column=0, sticky="nse", padx=(0, self.PAD_X/2))
     self.threshold_entry = ctk.CTkEntry(extra_left_frame, corner_radius=0,
                                         placeholder_text="example: 0 (forced)")
     self.threshold_entry.grid(row=1, column=1, sticky="nsew")
     # Margin settings section.
-    margin_label = ctk.CTkLabel(extra_right_frame, text="Margin:", font=self.LABEL_FONT)
+    margin_label = ctk.CTkLabel(extra_right_frame, text="Margin:",
+                                font=self.LABEL_FONT)
     margin_label.grid(row=1, column=0, sticky="nse", padx=(0, self.PAD_X/2))
     self.margin_entry = ctk.CTkEntry(extra_right_frame, corner_radius=0,
                                      placeholder_text="example: 20")
     self.margin_entry.grid(row=1, column=1, sticky="nsew")
-    
+
     # Default values.
-    self.editLockedEntry(self.stamp_path_entry, "stamp.png")
-    self.editLockedEntry(self.input_dir_entry, Path("docs"))
+    self.edit_locked_entry(self.stamp_path_entry, "stamp.png")
+    self.edit_locked_entry(self.input_dir_entry, Path("docs"))
     self.output_dir_entry.insert(0, "output")
     self.threshold_entry.insert(0, 1)
     self.margin_entry.insert(0, 20)
@@ -199,17 +223,18 @@ class StamperApp(ctk.CTk):
     """Starts the stamping process"""
     self.clear_output()
     # Grab values from entries.
-    self.STAMP = Path(self.stamp_path_entry.get())
+    self.stamp = Path(self.stamp_path_entry.get())
     input_dir = Path(self.input_dir_entry.get())
     output_dir = Path(self.output_dir_entry.get().lower().strip())
     append_value = self.append_entry.get().lower().strip()
-    self.THRESHOLD = int(self.threshold_entry.get().strip())
-    self.MARGIN = int(self.margin_entry.get().strip())
+    self.threshold = int(self.threshold_entry.get().strip())
+    self.margin = int(self.margin_entry.get().strip())
 
-    if (not input_dir.exists()):
-      self.send_output(f"[ERROR] \'{input_dir.name}\' directory cant be found.", "error")
+    if not input_dir.exists():
+      self.send_output(f"[ERROR] \'{input_dir.name}\' directory cant be found.",
+                       "error")
       return
-    
+
     # Lock the button so the user can't press until the process is done.
     self.start_btn.configure(state="disabled")
 
@@ -247,7 +272,7 @@ class StamperApp(ctk.CTk):
       # Add the stamp to the pdf.
       success = self.add_stamp(pdf, output_pdf)
       if success:
-        # Returned 1, there was an error. 
+        # Returned 1, there was an error.
         error_count = error_count + 1
       else:
         success_count = success_count + 1
@@ -276,22 +301,22 @@ class StamperApp(ctk.CTk):
     pages_to_stamp = range(1, len(doc) + 1)
 
     try:
-      with Image.open(self.STAMP) as img:
+      with Image.open(self.stamp) as img:
         stamp_width, stamp_height = img.size
     except FileNotFoundError:
-      self.send_output(f"[Error] \'{self.STAMP}\' is missing!", "error")
+      self.send_output(f"[Error] \'{self.stamp}\' is missing!", "error")
       return 1
 
     for page_num in pages_to_stamp:
       # PDF page indices start at 0.
       page = doc[page_num - 1]
-      
+
       # Obtain page dimensions.
       br = page.rect.br
-      x0 = br.x - stamp_width - self.MARGIN
-      y0 = br.y - stamp_height - self.MARGIN
-      x1 = br.x - self.MARGIN
-      y1 = br.y - self.MARGIN
+      x0 = br.x - stamp_width - self.margin
+      y0 = br.y - stamp_height - self.margin
+      x1 = br.x - self.margin
+      y1 = br.y - self.margin
       temp_rect = pymupdf.Rect(x0, y0, x1, y1)
 
       # CHECK FOR TEXT: search for any text inside that rectangle
@@ -301,21 +326,21 @@ class StamperApp(ctk.CTk):
       temp_y0 = y0
       temp_y1 = y1
       # Search is enabled.
-      if self.THRESHOLD > 0:
-        while text_in_rect.strip() and temp_y0 > self.MARGIN:
-          temp_y0 = temp_y0 - self.THRESHOLD
-          temp_y1 = temp_y1 - self.THRESHOLD
+      if self.threshold > 0:
+        while text_in_rect.strip() and temp_y0 > self.margin:
+          temp_y0 = temp_y0 - self.threshold
+          temp_y1 = temp_y1 - self.threshold
           temp_rect = pymupdf.Rect(x0, temp_y0, x1, temp_y1)
           text_in_rect = page.get_text("text", clip=temp_rect)
-      
+
       # Went out of bounds, default to bottom right.
       if temp_y0 < 0:
         rect = pymupdf.Rect(x0, y0, x1, y1)
       # In bounds, use new coordinates.
       else:
         rect = pymupdf.Rect(x0, temp_y0, x1, temp_y1)
-      
-      page.insert_image(rect, filename=self.STAMP)
+
+      page.insert_image(rect, filename=self.stamp)
 
     doc.save(output_pdf)
     doc.close()
@@ -325,7 +350,8 @@ class StamperApp(ctk.CTk):
   def create_output_section(self):
     """Create the Stamper output section of the UI."""
     # Output section.
-    stamper_label = ctk.CTkLabel(self, text="PDF Stamper", font=self.SECTION_FONT,
+    stamper_label = ctk.CTkLabel(self, text="PDF Stamper",
+                                 font=self.SECTION_FONT,
                                  fg_color=("gray70", "gray30"))
     stamper_label.pack(fill="x", pady=(self.PAD_Y, 0))
     # Stamper frame.
@@ -346,22 +372,22 @@ class StamperApp(ctk.CTk):
     self.stamper_output = ctk.CTkTextbox(stamper_frame, state="disabled")
     self.stamper_output.pack(fill="both", expand=True)
 
-  
+
   def browse_directory(self):
     """Open a system folder picker and update the input_dir_entry field."""
     directory_path = filedialog.askdirectory()
     if directory_path:
-      self.editLockedEntry(self.input_dir_entry, directory_path)
+      self.edit_locked_entry(self.input_dir_entry, directory_path)
 
 
   def browse_file(self):
     """Open a system file picker and update the stamp_path_entry field."""
     file_path = filedialog.askopenfilename()
     if file_path:
-      self.editLockedEntry(self.stamp_path_entry, file_path)
+      self.edit_locked_entry(self.stamp_path_entry, file_path)
 
 
-  def editLockedEntry(self, entry, value):
+  def edit_locked_entry(self, entry, value):
     """
     Edits a locked entry's value.
 
