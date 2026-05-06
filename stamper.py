@@ -46,6 +46,10 @@ class StamperApp(ctk.CTk):
         away from the page left/right edges.
     margin_y_entry (ctk.CTkEntry): Input field, the y-axis spacing of the stamp
         away from the page top/bottom edges.
+    pos_buttons (list[ctk.CTkButton]): A collection of 9 buttons representing
+        the stamp position grid.
+    dir_buttons (list[ctk.CTkButton]): A collection of 9 buttons representing
+        the search directions grid.
     start_btn (ctk.CTkButton): Control, triggers the renaming task.
     progress_bar (ctk.CTkProgressBar): Display, shows the progress of the task.
     stamper_output (ctk.CTkTextbox): Display, shows the task log warnings,
@@ -56,8 +60,10 @@ class StamperApp(ctk.CTk):
   # App constants.
   FONT_FAMILY = "Roboto"
   SECTION_FONT = (FONT_FAMILY, 18, "bold")
-  LABEL_FONT = (FONT_FAMILY, 16)
-  BUTTON_FONT = (FONT_FAMILY, 14, "bold")
+  LABEL_FONT = (FONT_FAMILY, 16)  # Single-line.
+  LABEL2_FONT = (FONT_FAMILY, 12)  # Multi-line / sub-header.
+  BUTTON_FONT = (FONT_FAMILY, 14, "bold")   # Normal button.
+  BUTTON2_FONT = (FONT_FAMILY, 10, "bold")  # Small button.
   PAD_X = 7  # X-axis padding.
   PAD_Y = 7  # Y-axis padding.
   DEFAULT_INPUT_DIR = "docs"
@@ -69,6 +75,8 @@ class StamperApp(ctk.CTk):
   margin_x = 20
   margin_y = 20
   threshold = 1
+  start_pos = 8   # Starting position, default: bottom right (3x3 grid index).
+  search_dir = 1  # Search direction, default: upwards (3x3 grid index).
 
 
   def __init__(self):
@@ -89,6 +97,8 @@ class StamperApp(ctk.CTk):
     self.threshold_entry = None
     self.margin_x_entry = None
     self.margin_y_entry = None
+    self.pos_buttons = []  # Position buttons.
+    self.dir_buttons = []  # Direction buttons.
     self.start_btn = None
     self.progress_bar = None
     self.stamper_output = None
@@ -100,6 +110,7 @@ class StamperApp(ctk.CTk):
 
     # App creation.
     self.create_settings_section()
+    self.create_position_settings()
     self.create_output_section()
 
     # Create color tags for the text output.
@@ -256,13 +267,74 @@ class StamperApp(ctk.CTk):
     return entry
 
 
+  def create_position_settings(self):
+    frame = ctk.CTkFrame(self, fg_color="transparent")
+    frame.pack(fill="x", expand=True, padx=self.PAD_X*2,
+               pady=(self.PAD_Y, 0), anchor="center")
+    frame.grid_columnconfigure(0, weight=1)
+    frame.grid_columnconfigure(3, weight=1)
+    frame.grid_columnconfigure(6, weight=1)
+
+    # Stamp position section.
+    pos_label = ctk.CTkLabel(frame, text="Stamp\nPosition",
+                        font=self.LABEL2_FONT)
+    pos_label.grid(row=0, column=1, sticky="nesw")
+
+    # Stamp position: 3x3 button grid.
+    pos_frame = ctk.CTkFrame(frame, fg_color="transparent")
+    pos_frame.grid(row=0, column=2, sticky="nesw",
+                   padx=(self.PAD_X, 0))
+    # Create a 3x3 grid of buttons.
+    for i in range(3):
+      for j in range(3):
+        pos_button = ctk.CTkButton(pos_frame, text="", corner_radius=0,
+                            width=28, fg_color="gray", border_width=1,
+                            command=lambda b=None: self.update_pos_selection(b))
+        pos_button.index = i * 3 + j
+        pos_button.configure(command=lambda b=pos_button:
+                             self.update_pos_selection(b))
+        self.pos_buttons.append(pos_button)
+        pos_button.grid(row=i, column=j, sticky="nesw", padx=1, pady=1)
+    self.pos_buttons[self.start_pos].configure(fg_color=ctk.ThemeManager
+                                    .theme["CTkButton"]["fg_color"])
+
+    # Search direction label.
+    dir_label = ctk.CTkLabel(frame, text="Search\nDirection",
+                        font=self.LABEL2_FONT)
+    dir_label.grid(row=0, column=4, sticky="nesw")
+    # Search direction buttons.
+    dir_frame = ctk.CTkFrame(frame, fg_color="transparent")
+    dir_frame.grid(row=0, column=5, sticky="nesw",
+                   padx=(self.PAD_X, 0))
+    # Create a 3x3 grid of buttons.
+    for i in range(3):
+      for j in range(3):
+        dir_button = ctk.CTkButton(dir_frame, text="", corner_radius=0,
+                            width=32, fg_color="gray", border_width=1,
+                            command=lambda b=None: self.update_pos_selection(b))
+        dir_button.index = i * 3 + j
+        dir_button.configure(command=lambda b=dir_button:
+                             self.update_dir_selection(b))
+        self.dir_buttons.append(dir_button)
+        dir_button.grid(row=i, column=j, sticky="nesw", padx=1, pady=1)
+    # Default search: upwards.
+    self.dir_buttons[self.search_dir].configure(fg_color=ctk.ThemeManager
+                                     .theme["CTkButton"]["fg_color"])
+    # Center button text.
+    self.dir_buttons[1].configure(text="Up", font=self.BUTTON2_FONT)
+    self.dir_buttons[3].configure(text="Left", font=self.BUTTON2_FONT)
+    self.dir_buttons[4].configure(text="All", font=self.BUTTON2_FONT)
+    self.dir_buttons[5].configure(text="Right", font=self.BUTTON2_FONT)
+    self.dir_buttons[7].configure(text="Down", font=self.BUTTON2_FONT)
+
+
   def create_output_section(self):
     """Create the Stamper output section of the UI."""
     # Output section.
     stamper_label = ctk.CTkLabel(self, text="PDF Stamper",
                                  font=self.SECTION_FONT,
                                  fg_color=("gray70", "gray30"))
-    stamper_label.pack(fill="x", pady=(self.PAD_Y*2, 0))
+    stamper_label.pack(fill="x", pady=(self.PAD_Y, 0))
     # Stamper frame.
     stamper_frame = ctk.CTkFrame(self, fg_color="transparent")
     stamper_frame.pack(fill="both", expand=True)
@@ -513,6 +585,12 @@ class StamperApp(ctk.CTk):
 
 
   def validate_float(self, value):
+    """
+    Checks if the user's input is a valid float.
+
+    Args:
+      value (str): the user's input to check.
+    """
     if value == "":
       return True
     try:
@@ -522,6 +600,12 @@ class StamperApp(ctk.CTk):
       return False
 
   def validate_int(self, value):
+    """
+    Checks if the user's input is a valid int.
+
+    Args:
+      value (str): the user's input to check.
+    """
     if value == "":
       return True
     try:
@@ -529,6 +613,28 @@ class StamperApp(ctk.CTk):
       return True
     except ValueError:
       return False
+
+
+  def update_pos_selection(self, clicked_button):
+    # Adjust color accordingly.
+    default_blue = ctk.ThemeManager.theme["CTkButton"]["fg_color"]
+
+    for button in self.pos_buttons:
+      button.configure(fg_color="gray")
+
+    clicked_button.configure(fg_color=default_blue)
+    self.start_pos = clicked_button.index
+
+
+  def update_dir_selection(self, clicked_button):
+    # Adjust color accordingly.
+    default_blue = ctk.ThemeManager.theme["CTkButton"]["fg_color"]
+
+    for button in self.dir_buttons:
+      button.configure(fg_color="gray")
+
+    clicked_button.configure(fg_color=default_blue)
+    self.search_pos = clicked_button.index
 
 if __name__ == "__main__":
   app = StamperApp()
