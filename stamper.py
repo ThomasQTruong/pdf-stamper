@@ -65,8 +65,9 @@ class StamperApp(ctk.CTk):
 
   # App settings.
   stamp = None
-  threshold = None
-  margin = None
+  margin_x = 20
+  margin_y = 20
+  threshold = 1
 
 
   def __init__(self):
@@ -91,6 +92,10 @@ class StamperApp(ctk.CTk):
     self.progress_bar = None
     self.stamper_output = None
     self.icon = None
+
+    # Data validators.
+    self.vcmd_float = self.register(self.validate_float)
+    self.vcmd_int   = self.register(self.validate_int)
 
     # App creation.
     self.create_settings_section()
@@ -166,7 +171,8 @@ class StamperApp(ctk.CTk):
     margin_x_label.grid(row=0, column=1, sticky="nes",
                         padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     self.margin_x_entry = ctk.CTkEntry(extra_settings_frame, corner_radius=0,
-                                       width=50, placeholder_text="i.e.: 20")
+                        validate="key", validatecommand=(self.vcmd_float, "%P"),
+                        width=50, placeholder_text="i.e.: 20")
     self.margin_x_entry.grid(row=0, column=2, sticky="nesw",
                              padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     # MarginY settings.
@@ -175,7 +181,8 @@ class StamperApp(ctk.CTk):
     marginy_y_label.grid(row=0, column=3, sticky="nes",
                          padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     self.margin_y_entry = ctk.CTkEntry(extra_settings_frame, corner_radius=0,
-                                       width=50, placeholder_text="i.e.: 20")
+                        validate="key", validatecommand=(self.vcmd_float, "%P"),
+                        width=50, placeholder_text="i.e.: 20")
     self.margin_y_entry.grid(row=0, column=4, sticky="nesw",
                              padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     # Threshold settings section.
@@ -184,19 +191,18 @@ class StamperApp(ctk.CTk):
     threshold_label.grid(row=0, column=5, sticky="nes",
                          padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     self.threshold_entry = ctk.CTkEntry(extra_settings_frame, corner_radius=0,
-                            width=50, placeholder_text="i.e.: 0")
+                          validate="key", validatecommand=(self.vcmd_int, "%P"),
+                          width=50, placeholder_text="i.e.: 0")
     self.threshold_entry.grid(row=0, column=6, sticky="nesw",
                               pady=(self.PAD_Y, 0))
 
     # Default values.
-    self.edit_entry(self.stamp_path_entry, Path.cwd()
-                           / self.DEFAULT_STAMP_PATH)
-    self.edit_entry(self.input_dir_entry, Path.cwd()
-                           / self.DEFAULT_INPUT_DIR)
+    self.stamp_path_entry.insert(0, Path.cwd() / self.DEFAULT_STAMP_PATH)
+    self.input_dir_entry.insert(0, Path.cwd() / self.DEFAULT_INPUT_DIR)
     self.output_dir_entry.insert(0, Path.cwd() / self.DEFAULT_OUTPUT_DIR)
-    self.threshold_entry.insert(0, 1)
-    self.margin_x_entry.insert(0, 20)
-    self.margin_y_entry.insert(0, 20)
+    self.margin_x_entry.insert(0, self.margin_x)
+    self.margin_y_entry.insert(0, self.margin_y)
+    self.threshold_entry.insert(0, self.threshold)
 
 
   def create_selector_section(self, parent, row, text, function):
@@ -267,9 +273,29 @@ class StamperApp(ctk.CTk):
     input_dir = Path(self.input_dir_entry.get())
     output_dir = Path(self.output_dir_entry.get())
     append_value = self.append_entry.get()
-    self.threshold = int(self.threshold_entry.get().strip())
-    self.margin_x = int(self.margin_x_entry.get().strip())
-    self.margin_y = int(self.margin_y_entry.get().strip())
+    self.margin_x = self.margin_x_entry.get().strip()
+    self.margin_y = self.margin_y_entry.get().strip()
+    self.threshold = self.threshold_entry.get().strip()
+    # Validate values.
+    if self.margin_x == "":
+      self.margin_x = 0
+      self.edit_entry(self.margin_x_entry, "0")
+    if self.margin_y == "":
+      self.margin_y = 0
+      self.edit_entry(self.margin_y_entry, "0")
+    if self.threshold == "":
+      self.threshold = 0
+      self.edit_entry(self.threshold_entry, "0")
+
+    try:
+      self.margin_x = float(self.margin_x)
+      self.margin_y = float(self.margin_y)
+      self.threshold = int(self.threshold)
+    except ValueError:
+      self.send_output(f"[ERROR] marginX: {self.margin_x}, marginY: " +
+                       f"{self.margin_y}, or threshold: {self.threshold} " +
+                       "is invalid.", "error")
+      return
 
     if not input_dir.exists():
       self.send_output(f"[ERROR] \'{input_dir.name}\' directory cant be found.",
@@ -312,11 +338,14 @@ class StamperApp(ctk.CTk):
 
       # Add the stamp to the pdf.
       success = self.add_stamp(pdf, output_pdf)
-      if success:
+      if success == 1:
         # Returned 1, there was an error.
-        error_count = error_count + 1
+        error_count += 1
+      elif success == 2:
+        # Returned 2, there was a warning.
+        warning_count += 1
       else:
-        success_count = success_count + 1
+        success_count += 1
 
     # Run has finished.
     self.send_output(f"Finished stamping {success_count} files with "
@@ -358,6 +387,18 @@ class StamperApp(ctk.CTk):
       x1 = br.x - self.margin_x
       y1 = br.y - self.margin_y
       temp_rect = pymupdf.Rect(x0, y0, x1, y1)
+
+      # Check margin x/y values.
+      if x0 < self.margin_x:
+        self.send_output(f"[Warning] marginX ({self.margin_x}) or stamp " +
+                         f"width ({stamp_width}) is too high for the page " +
+                         f"width of {br.x}!", "warning")
+        return 2
+      if y0 < self.margin_y:
+        self.send_output(f"[Warning] marginY ({self.margin_y}) or stamp " +
+                         f"height ({stamp_height}) is too high for the page " +
+                         f"height of {br.y}!", "warning")
+        return 2
 
       # CHECK FOR TEXT: search for any text inside that rectangle
       text_in_rect = page.get_text("text", clip=temp_rect)
@@ -453,6 +494,24 @@ class StamperApp(ctk.CTk):
     # Lock the output.
     self.stamper_output.configure(state="disabled")
 
+
+  def validate_float(self, value):
+    if value == "":
+      return True
+    try:
+      float(value)
+      return True
+    except ValueError:
+      return False
+
+  def validate_int(self, value):
+    if value == "":
+      return True
+    try:
+      int(value)
+      return True
+    except ValueError:
+      return False
 
 if __name__ == "__main__":
   app = StamperApp()
