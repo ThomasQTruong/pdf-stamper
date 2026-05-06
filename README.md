@@ -19,18 +19,19 @@ Mass stamps files in a specified folder with a specified stamp img.
 1. Download from the [releases](https://github.com/ThomasQTruong/pdf-stamper/releases).
 2. Open the program.
    - <img src=".assets/docs/stamper-main.png" width="300" title="PDF Stamper GUI">
-3. Leave default for `./stamp.png` OR select the stamp image.
+3. Select the stamp image (default: `./stamp.png`).
    - <img src=".assets/docs/stamper-file-select.png" width="300" title="PDF Stamper File Selector">
-4. Leave default for `./docs/` OR select the input directory (folder that contains all the pdfs to stamp).
+4. Select the input directory (folder that contains all the PDFs to stamp; default: `./docs/`).
    - <img src=".assets/docs/stamper-folder-select.png" width="300" title="PDF Stamper Folder Selector">
 5. Enter the other settings or leave default.
-   - `Output`: The folder to output the stamped files to.
-   - `Append`: Add certain text to the end of the file.
+   - `Output`: The folder to output the stamped files to (default: `./output/`).
+   - `Append`: Add certain text to the end of the file name.
      - i.e. Append = `_stamped` would result in `file.pdf` => `file_stamped.pdf`
-   - `Threshold`: The search threshold for finding an empty space to stamp.
+   - `MarginX`: The x-axis spacing of the stamp away from the page left/right edges (default: `20`).
+   - `MarginY`: The y-axis spacing of the stamp away from the page top/bottom edges (default: `20`).
+   - `Threshold`: The search threshold for finding an empty space to stamp (default: `1`).
      - Only stamps on the right side, starts from bottom then searches upward for space.
      - Set to `0` if you do not want it to search for any space; fixed stamp at bottom-right.
-   - `Margin`: The spacing between the stamp and the page edge.
 6. Click start and the files should be stamped!
    - <img src=".assets/docs/stamper-output.png" width="300" title="PDF Stamper Output">
    - <img src=".assets/docs/stamped-example.png" width="300" title="PDF Stamped">

@@ -9,6 +9,7 @@ import os
 import sys
 import pymupdf
 import customtkinter as ctk
+from CTkToolTip import *
 from tkinter import filedialog
 from pathlib import Path
 from PIL import Image, ImageTk
@@ -162,7 +163,7 @@ class StamperApp(ctk.CTk):
     extra_settings_frame.grid(row=3, column=1, sticky="nesw")
     extra_settings_frame.grid_columnconfigure(0, weight=1)
     self.append_entry = ctk.CTkEntry(extra_settings_frame, corner_radius=0,
-                                     placeholder_text="i.e.: _stamped")
+                                     placeholder_text="i.e. _stamped")
     self.append_entry.grid(row=0, column=0, sticky="nesw",
                            padx=self.PAD_X, pady=(self.PAD_Y, 0))
     # MarginX settings.
@@ -195,6 +196,22 @@ class StamperApp(ctk.CTk):
                           width=50, placeholder_text="i.e.: 0")
     self.threshold_entry.grid(row=0, column=6, sticky="nesw",
                               pady=(self.PAD_Y, 0))
+
+    # Tool tips.
+    CTkToolTip(self.stamp_path_entry, "The image to stamp on the PDF.")
+    CTkToolTip(self.input_dir_entry, "The folder that contains all the " +
+                                     "PDFs to stamp.")
+    CTkToolTip(self.output_dir_entry, "The folder to output the stamped " +
+                                      "files to.")
+    CTkToolTip(self.append_entry, "Add certain text to the end of the file " +
+                                  "name.\ni.e. \'_stamped\' would result in " +
+                                  "\'file.pdf\' => \'file_stamped.pdf\'")
+    CTkToolTip(self.margin_x_entry, "The x-axis spacing of the stamp away " +
+                                    "from the page left/right edges.")
+    CTkToolTip(self.margin_y_entry, "The y-axis spacing of the stamp away " +
+                                    "from the page top/bottom edges.")
+    CTkToolTip(self.threshold_entry, "The search threshold for finding an " +
+                                     "empty space to stamp.\n0 = disable")
 
     # Default values.
     self.stamp_path_entry.insert(0, Path.cwd() / self.DEFAULT_STAMP_PATH)
