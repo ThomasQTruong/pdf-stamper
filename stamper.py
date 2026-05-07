@@ -243,6 +243,9 @@ class StamperApp(ctk.CTk):
       text (str): the text label to display for the entry.
       function (callable): a function accepting one ctk.CTkEntry parameter,
           called when the button is clicked.
+    
+    Returns:
+      ctk.CTkEntry: The entry created for the selector.
     """
     # Selector label.
     label = ctk.CTkLabel(parent, text=f"{text}:", font=self.LABEL_FONT)
@@ -268,6 +271,7 @@ class StamperApp(ctk.CTk):
 
 
   def create_position_settings(self):
+    """Creates the position settings (Stamp Position/Search Direction)."""
     frame = ctk.CTkFrame(self, fg_color="transparent")
     frame.pack(fill="x", expand=True, padx=self.PAD_X*2,
                pady=(self.PAD_Y, 0), anchor="center")
@@ -451,8 +455,12 @@ class StamperApp(ctk.CTk):
     """
     Adds a stamp to the pdf file.
 
-    input_pdf (Path): the input file's path.
-    output_pdf (Path): the output file's path.
+    Args:
+      input_pdf (Path): the input file's path.
+      output_pdf (Path): the output file's path.
+
+    Returns:
+      int: 0 if success, 1 if error, and 2 if warning.
     """
     # Open the pdf with pymupdf.
     doc = pymupdf.open(input_pdf)
@@ -469,46 +477,51 @@ class StamperApp(ctk.CTk):
       # PDF page indices start at 0.
       page = doc[page_num - 1]
 
-      # Obtain page dimensions.
+      # Obtain page dimensions and top-left values.
       br = page.rect.br
-      x0 = br.x - stamp_width - self.margin_x
-      y0 = br.y - stamp_height - self.margin_y
-      x1 = br.x - self.margin_x
-      y1 = br.y - self.margin_y
-      temp_rect = pymupdf.Rect(x0, y0, x1, y1)
+      x0 = self.margin_x
+      y0 = self.margin_y
+      x1 = x0 + stamp_width
+      y1 = y0 + stamp_height
+      start_row = int(self.start_pos / 3)
+      start_column = self.start_pos % 3
+
+      # Set x-value based on column.
+      if start_column == 1:
+        # Middle column, center the stamp.
+        x0 = (br.x - stamp_width) / 2
+        x1 = x0 + stamp_width
+      elif start_column == 2:
+        # Right column.
+        x0 = br.x - self.margin_x - stamp_width
+        x1 = br.x - self.margin_x
+
+      # Set y-value based on row.
+      if start_row == 1:
+        # Middle row.
+        y0 = (br.y - stamp_height) / 2
+        y1 = y0 + stamp_height
+      elif start_row == 2:
+        # Bottom row.
+        y0 = br.y - self.margin_y - stamp_height
+        y1 = br.y - self.margin_y
 
       # Check margin x/y values.
-      if x0 < self.margin_x:
-        self.send_output(f"[Warning] marginX ({self.margin_x}) or stamp " +
-                         f"width ({stamp_width}) is too high for the page " +
-                         f"width of {br.x}!", "warning")
+      if self.is_out_of_bounds(x0, x1, br.x, self.margin_x):
+        self.send_output(f"[Skipped] Out of Bounds: marginX ({self.margin_x})"
+                         f" or stamp width ({stamp_width}) is too high for" +
+                         f" the page width ({br.x})!", "warning")
         return 2
-      if y0 < self.margin_y:
-        self.send_output(f"[Warning] marginY ({self.margin_y}) or stamp " +
-                         f"height ({stamp_height}) is too high for the page " +
-                         f"height of {br.y}!", "warning")
+      if self.is_out_of_bounds(y0, y1, br.y, self.margin_y):
+        self.send_output(f"[Skipped] Out of Bounds: marginY ({self.margin_y})" +
+                         f" or stamp height ({stamp_height}) is too high for" +
+                         f" the page height ({br.y})!", "warning")
         return 2
 
-      # CHECK FOR TEXT: search for any text inside that rectangle
-      text_in_rect = page.get_text("text", clip=temp_rect)
-
-      # There is text in the way, move up.
-      temp_y0 = y0
-      temp_y1 = y1
+      rect = pymupdf.Rect(x0, y0, x1, y1)
       # Search is enabled.
       if self.threshold > 0:
-        while text_in_rect.strip() and temp_y0 > self.margin_y:
-          temp_y0 = temp_y0 - self.threshold
-          temp_y1 = temp_y1 - self.threshold
-          temp_rect = pymupdf.Rect(x0, temp_y0, x1, temp_y1)
-          text_in_rect = page.get_text("text", clip=temp_rect)
-
-      # Went out of bounds, default to bottom right.
-      if temp_y0 < 0:
-        rect = pymupdf.Rect(x0, y0, x1, y1)
-      # In bounds, use new coordinates.
-      else:
-        rect = pymupdf.Rect(x0, temp_y0, x1, temp_y1)
+        rect = self.search(page, rect)
 
       page.insert_image(rect, filename=self.stamp)
 
@@ -518,14 +531,24 @@ class StamperApp(ctk.CTk):
 
 
   def browse_directory(self, entry):
-    """Open a system folder picker and update the input_dir_entry field."""
+    """
+    Open a system folder picker and update the input_dir_entry field.
+
+    Args:
+      entry (ctk.CTkEntry): The entry box to fill with the folder's path.
+    """
     directory_path = filedialog.askdirectory()
     if directory_path:
       self.edit_entry(entry, directory_path)
 
 
   def browse_file(self, entry):
-    """Open a system file picker and update the stamp_path_entry field."""
+    """
+    Open a system file picker and update the stamp_path_entry field.
+    
+    Args:
+      entry (ctk.CTkEntry): The entry box to fill with the file's path.
+    """
     file_path = filedialog.askopenfilename()
     if file_path:
       self.edit_entry(entry, file_path)
@@ -590,6 +613,9 @@ class StamperApp(ctk.CTk):
 
     Args:
       value (str): the user's input to check.
+    
+    Returns:
+      bool: True if the value is a valid float, False otherwise.
     """
     if value == "":
       return True
@@ -605,6 +631,9 @@ class StamperApp(ctk.CTk):
 
     Args:
       value (str): the user's input to check.
+    
+    Returns:
+      bool: True if the value is a valid int, False otherwise.
     """
     if value == "":
       return True
@@ -616,6 +645,12 @@ class StamperApp(ctk.CTk):
 
 
   def update_pos_selection(self, clicked_button):
+    """
+    Updates the position selector grid.
+
+    Args:
+      clicked_button (ctk.CTkButton): The button that was clicked.
+    """
     # Adjust color accordingly.
     default_blue = ctk.ThemeManager.theme["CTkButton"]["fg_color"]
 
@@ -627,6 +662,12 @@ class StamperApp(ctk.CTk):
 
 
   def update_dir_selection(self, clicked_button):
+    """
+    Updates the direction selector grid.
+
+    Args:
+      clicked_button (ctk.CTkButton): The button that was clicked.
+    """
     # Adjust color accordingly.
     default_blue = ctk.ThemeManager.theme["CTkButton"]["fg_color"]
 
@@ -635,6 +676,100 @@ class StamperApp(ctk.CTk):
 
     clicked_button.configure(fg_color=default_blue)
     self.search_pos = clicked_button.index
+
+  def is_out_of_bounds(self, pos0, pos1, max_size, margin):
+    """
+    Determines whether the box coordinates are outside of the page bound.
+    
+    Args:
+      pos0 (float): the x0/y0 coordinate of the box.
+      pos1 (float): the x1/y1 coordinate of the box.
+      max_size (float): the page height/width.
+      margin (int): the inner-distance away from the edge.
+    
+    Returns:
+      bool: True if the rect is out of bounds, False otherwise.
+    """
+    return pos0 < margin or pos1 > max_size - margin
+
+
+  def search(self, page, rect):
+    """
+    Searches for an empty spot to stamp.
+
+    Args:
+      page (Page): The document page to search on.
+      rect (pymupdf.Rect): The rectangle where the stamp goes.
+    
+    Returns:
+      pymupdf.Rect: The rect with the found position, else original rect.
+    """
+    text_in_rect = page.get_text("text", clip=rect)
+    # Empty spot at the location already.
+    if not text_in_rect.strip():
+      return rect
+    br = page.rect.br
+    search_row = int(self.search_dir / 3)
+    search_column = self.search_dir % 3
+
+    # Calculate threshold based on direction.
+    threshold_x = self.threshold
+    if search_column == 0:  # Left column.
+      threshold_x *= -1
+    elif search_column % 3 == 1:  # Middle column.
+      threshold_x = 0
+
+    threshold_y = self.threshold
+    if search_row == 0:  # Top row.
+      threshold_y *= -1
+    elif search_row == 1:  # Middle row.
+      threshold_y = 0
+
+    # User selected all directions.
+    if self.search_dir == 4:
+      # Start from the top-left corner.
+      temp_x0 = self.margin_x - self.threshold
+      temp_y0 = self.margin_y - self.threshold
+      temp_x1 = temp_x0 + rect.x1 - rect.x0
+      temp_y1 = temp_y0 + rect.y1 - rect.y0
+
+      # While text is in the way and y-axis is not out.
+      while text_in_rect.strip():
+        temp_y0 += self.threshold
+        temp_y1 += self.threshold
+        # While text is in the way and y-axis is not out.
+        out_of_bounds_x = False
+        while text_in_rect.strip() and not out_of_bounds_x:
+          temp_x0 += self.threshold
+          temp_x1 += self.threshold
+          temp_rect = pymupdf.Rect(temp_x0, temp_y0, temp_x1, temp_y1)
+          text_in_rect = page.get_text("text", clip=temp_rect)
+          # X-axis is out of bounds.
+          if self.is_out_of_bounds(temp_x0, temp_x1, br.x, self.margin_x):
+            out_of_bounds_x = True
+        # Y-axis is out of bounds, return original rect (couldn't find any).
+        if self.is_out_of_bounds(temp_y0, temp_y1, br.y, self.margin_y):
+          return rect
+    else:
+      temp_x0 = rect.x0
+      temp_y0 = rect.y0
+      temp_x1 = rect.x1
+      temp_y1 = rect.y1
+      while text_in_rect.strip():
+        temp_x0 += threshold_x
+        temp_y0 += threshold_y
+        temp_x1 += threshold_x
+        temp_y1 += threshold_y
+        temp_rect = pymupdf.Rect(temp_x0, temp_y0, temp_x1, temp_y1)
+        text_in_rect = page.get_text("text", clip=temp_rect)
+        # Search is out of bounds, return original rect.
+        if (self.is_out_of_bounds(temp_x0, temp_x1, br.x, self.margin_x) or
+            self.is_out_of_bounds(temp_y0, temp_y1, br.y, self.margin_y)):
+          return rect
+
+    # Search went through, return result.
+    return temp_rect
+
 
 if __name__ == "__main__":
   app = StamperApp()
