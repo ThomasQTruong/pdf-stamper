@@ -299,6 +299,15 @@ class StamperApp(ctk.CTk):
                              self.update_pos_selection(b))
         self.pos_buttons.append(pos_button)
         pos_button.grid(row=i, column=j, sticky="nesw", padx=1, pady=1)
+        y_position = ["Top", "", "Bottom"]
+        x_position = ["Left", "", "Right"]
+        position_hover = " ".join([y_position[i], x_position[j]]).strip()
+        if position_hover == "":
+          position_hover = "Center"
+        pos_tooltip = (f"The grid position to stamp on the "
+                      f"PDF.\n[{position_hover}]")
+
+        CTkToolTip(pos_button, pos_tooltip)
     self.pos_buttons[self.start_pos].configure(fg_color=ctk.ThemeManager
                                     .theme["CTkButton"]["fg_color"])
 
@@ -321,6 +330,8 @@ class StamperApp(ctk.CTk):
                              self.update_dir_selection(b))
         self.dir_buttons.append(dir_button)
         dir_button.grid(row=i, column=j, sticky="nesw", padx=1, pady=1)
+        CTkToolTip(dir_button, "The direction to search for an empty spot " +
+                   "to stamp.\nthreshold = 0 to turn off search")
     # Default search: upwards.
     self.dir_buttons[self.search_dir].configure(fg_color=ctk.ThemeManager
                                      .theme["CTkButton"]["fg_color"])
