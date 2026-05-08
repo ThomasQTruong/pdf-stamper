@@ -521,7 +521,12 @@ class StamperApp(ctk.CTk):
       rect = pymupdf.Rect(x0, y0, x1, y1)
       # Search is enabled.
       if self.threshold > 0:
-        rect = self.search(page, rect)
+        if self.search_dir == 4:
+          # Search all of the directions.
+          rect = self.search_all(page, rect)
+        else:
+          # Search normally.
+          rect = self.search(page, rect)
 
       page.insert_image(rect, filename=self.stamp)
 
@@ -675,7 +680,8 @@ class StamperApp(ctk.CTk):
       button.configure(fg_color="gray")
 
     clicked_button.configure(fg_color=default_blue)
-    self.search_pos = clicked_button.index
+    self.search_dir = clicked_button.index
+
 
   def is_out_of_bounds(self, pos0, pos1, max_size, margin):
     """
@@ -695,7 +701,7 @@ class StamperApp(ctk.CTk):
 
   def search(self, page, rect):
     """
-    Searches for an empty spot to stamp.
+    Searches for an empty spot to stamp at the selected direction.
 
     Args:
       page (Page): The document page to search on.
@@ -725,49 +731,87 @@ class StamperApp(ctk.CTk):
     elif search_row == 1:  # Middle row.
       threshold_y = 0
 
-    # User selected all directions.
-    if self.search_dir == 4:
-      # Start from the top-left corner.
-      temp_x0 = self.margin_x - self.threshold
-      temp_y0 = self.margin_y - self.threshold
-      temp_x1 = temp_x0 + rect.x1 - rect.x0
-      temp_y1 = temp_y0 + rect.y1 - rect.y0
+    # Diagonal search.
+    if self.search_dir % 2 == 0:
+      # Figure out the end point to calculate slope.
+      stamp_width = rect.x1 - rect.x0
+      stamp_height = rect.y1 - rect.y0
+      end_x = self.margin_x
+      end_y = self.margin_y
+      if self.margin_x == rect.x0:
+        end_x = br.x - self.margin_x - stamp_width
+      if self.margin_y == rect.y0:
+        end_y = br.y - self.margin_y - stamp_height
 
-      # While text is in the way and y-axis is not out.
+      # Calculate slope with slope formula.
+      slope = (end_y - rect.y0) / (end_x - rect.x0)
+
+      # Formula: y = mx + b, so apply slope to threshold_x.
+      threshold_x *= slope
+
+    # Search for a free slot using the selected direction.
+    temp_x0 = rect.x0
+    temp_y0 = rect.y0
+    temp_x1 = rect.x1
+    temp_y1 = rect.y1
+    while text_in_rect.strip():
+      temp_x0 += threshold_x
+      temp_y0 += threshold_y
+      temp_x1 += threshold_x
+      temp_y1 += threshold_y
+      temp_rect = pymupdf.Rect(temp_x0, temp_y0, temp_x1, temp_y1)
+      text_in_rect = page.get_text("text", clip=temp_rect)
+      # Search is out of bounds, return original rect.
+      if (self.is_out_of_bounds(temp_x0, temp_x1, br.x, self.margin_x) or
+          self.is_out_of_bounds(temp_y0, temp_y1, br.y, self.margin_y)):
+        return rect
+
+    # Passed through conditions, successfully found spot.
+    return temp_rect
+
+
+  def search_all(self, page, rect):
+    """
+    Searches for an empty spot to stamp for both x and y axis.
+
+    Args:
+      page (Page): The document page to search on.
+      rect (pymupdf.Rect): The rectangle where the stamp goes.
+    
+    Returns:
+      pymupdf.Rect: The rect with the found position, else original rect.
+    """
+    text_in_rect = page.get_text("text", clip=rect)
+    # Empty spot at the location already.
+    if not text_in_rect.strip():
+      return rect
+    br = page.rect.br
+
+    # Start from the top-left corner.
+    temp_y0 = self.margin_y
+    temp_y1 = temp_y0 + rect.y1 - rect.y0
+
+    # While text is in the way and y-axis is not out.
+    while text_in_rect.strip():
+      temp_x0 = self.margin_x
+      temp_x1 = temp_x0 + rect.x1 - rect.x0
+      # While while text is in the way in the column.
       while text_in_rect.strip():
-        temp_y0 += self.threshold
-        temp_y1 += self.threshold
-        # While text is in the way and y-axis is not out.
-        out_of_bounds_x = False
-        while text_in_rect.strip() and not out_of_bounds_x:
-          temp_x0 += self.threshold
-          temp_x1 += self.threshold
-          temp_rect = pymupdf.Rect(temp_x0, temp_y0, temp_x1, temp_y1)
-          text_in_rect = page.get_text("text", clip=temp_rect)
-          # X-axis is out of bounds.
-          if self.is_out_of_bounds(temp_x0, temp_x1, br.x, self.margin_x):
-            out_of_bounds_x = True
-        # Y-axis is out of bounds, return original rect (couldn't find any).
-        if self.is_out_of_bounds(temp_y0, temp_y1, br.y, self.margin_y):
-          return rect
-    else:
-      temp_x0 = rect.x0
-      temp_y0 = rect.y0
-      temp_x1 = rect.x1
-      temp_y1 = rect.y1
-      while text_in_rect.strip():
-        temp_x0 += threshold_x
-        temp_y0 += threshold_y
-        temp_x1 += threshold_x
-        temp_y1 += threshold_y
         temp_rect = pymupdf.Rect(temp_x0, temp_y0, temp_x1, temp_y1)
         text_in_rect = page.get_text("text", clip=temp_rect)
-        # Search is out of bounds, return original rect.
-        if (self.is_out_of_bounds(temp_x0, temp_x1, br.x, self.margin_x) or
-            self.is_out_of_bounds(temp_y0, temp_y1, br.y, self.margin_y)):
-          return rect
+        # X-axis is out of bounds, check next row.
+        if self.is_out_of_bounds(temp_x0, temp_x1, br.x, self.margin_x):
+          break
+        # Move x/y by the threshold.
+        temp_x0 += self.threshold
+        temp_x1 += self.threshold
+      # Y-axis is out of bounds, return original rect (couldn't find any).
+      if self.is_out_of_bounds(temp_y0, temp_y1, br.y, self.margin_y):
+        return rect
+      temp_y0 += self.threshold
+      temp_y1 += self.threshold
 
-    # Search went through, return result.
+    # Passed through conditions, successfully found spot.
     return temp_rect
 
 
