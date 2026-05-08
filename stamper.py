@@ -790,10 +790,10 @@ class StamperApp(ctk.CTk):
         end_y = br.y - self.margin_y - stamp_height
 
       # Calculate slope with slope formula.
-      slope = (end_y - rect.y0) / (end_x - rect.x0)
+      slope = abs((end_y - rect.y0) / (end_x - rect.x0))
 
       # Formula: y = mx + b, so apply slope to threshold_x.
-      threshold_x *= slope
+      threshold_y *= slope
 
     # Search for a free slot using the selected direction.
     temp_x0 = rect.x0
