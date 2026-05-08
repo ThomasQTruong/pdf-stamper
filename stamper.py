@@ -9,7 +9,8 @@ import os
 import sys
 import pymupdf
 import customtkinter as ctk
-from CTkToolTip import *
+from CTkToolTip import CTkToolTip
+from CTkMessagebox import CTkMessagebox
 from tkinter import filedialog
 from pathlib import Path
 from PIL import Image, ImageTk
@@ -681,6 +682,16 @@ class StamperApp(ctk.CTk):
 
     clicked_button.configure(fg_color=default_blue)
     self.search_dir = clicked_button.index
+
+    # Selected all directions and has very low threshold.
+    if clicked_button.index == 4 and self.threshold < 25:
+      CTkMessagebox(title="Warning",
+                    message="Threshold is low (< ~25) for searching all" +
+                            "directions. It will probably take a long" + 
+                            "time to search.",
+                    icon="warning",
+                    option_1 = "OK",
+                    master=self)
 
 
   def is_out_of_bounds(self, pos0, pos1, max_size, margin):
