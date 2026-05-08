@@ -6,6 +6,7 @@
 """
 
 import json
+import math
 import os
 import pymupdf
 import sys
@@ -789,11 +790,14 @@ class StamperApp(ctk.CTk):
       if self.margin_y == rect.y0:
         end_y = br.y - self.margin_y - stamp_height
 
-      # Calculate slope with slope formula.
-      slope = abs((end_y - rect.y0) / (end_x - rect.x0))
+      # Calculate the hypotenuse.
+      dx = end_x - rect.x0
+      dy = end_y - rect.y0
+      distance = math.hypot(dx, dy)
 
-      # Formula: y = mx + b, so apply slope to threshold_x.
-      threshold_y *= slope
+      # Apply to threshold.
+      threshold_x = (dx / distance) * self.threshold
+      threshold_y = (dy / distance) * self.threshold
 
     # Search for a free slot using the selected direction.
     temp_x0 = rect.x0
