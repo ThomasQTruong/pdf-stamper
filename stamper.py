@@ -5,6 +5,7 @@
   output directory.
 """
 
+import json
 import os
 import pymupdf
 import sys
@@ -121,6 +122,9 @@ class StamperApp(ctk.CTk):
     self.stamper_output.tag_config("warning", foreground="#cf8b0c") # Orange
     self.stamper_output.tag_config("success", foreground="#3e9b59") # Green
 
+    # Load settings.
+    self.load_config()
+
 
   def set_app_icon(self):
     """Sets the app icon."""
@@ -226,14 +230,6 @@ class StamperApp(ctk.CTk):
                                     "from the page top/bottom edges.")
     CTkToolTip(self.threshold_entry, "The search threshold for finding an " +
                                      "empty space to stamp.\n0 = disable")
-
-    # Default values.
-    self.stamp_path_entry.insert(0, Path.cwd() / self.DEFAULT_STAMP_PATH)
-    self.input_dir_entry.insert(0, Path.cwd() / self.DEFAULT_INPUT_DIR)
-    self.output_dir_entry.insert(0, Path.cwd() / self.DEFAULT_OUTPUT_DIR)
-    self.margin_x_entry.insert(0, self.margin_x)
-    self.margin_y_entry.insert(0, self.margin_y)
-    self.threshold_entry.insert(0, self.threshold)
 
 
   def create_selector_section(self, parent, row, text, function):
@@ -363,6 +359,7 @@ class StamperApp(ctk.CTk):
 
   def start_stamper(self):
     """Starts the stamping process"""
+    # Clear the output.
     self.clear_output()
     # Grab values from entries.
     self.stamp = Path(self.stamp_path_entry.get())
@@ -397,6 +394,9 @@ class StamperApp(ctk.CTk):
       self.send_output(f"[ERROR] \'{input_dir.name}\' directory cant be found.",
                        "error")
       return
+
+    # Save the settings locally to a json file.
+    self.save_config()
 
     # Lock the button so the user can't press until the process is done.
     self.start_btn.configure(state="disabled")
@@ -720,13 +720,13 @@ class StamperApp(ctk.CTk):
 
     # Selected all directions and has very low threshold.
     if clicked_button.index == 4 and self.threshold < 25:
-      CTkMessagebox(title="Warning",
+      self.after(200, lambda: CTkMessagebox(title="Warning",
                     message="Threshold is low (< ~25) for searching all" +
                             "directions. It will probably take a long" + 
                             "time to search.",
                     icon="warning",
                     option_1 = "OK",
-                    master=self)
+                    master=self))
 
 
   def is_out_of_bounds(self, pos0, pos1, max_size, margin):
@@ -871,7 +871,6 @@ class StamperApp(ctk.CTk):
     Returns:
       int: The progress total.
     """
-
     # Create a list of files.
     files = list(input_dir.iterdir())
 
@@ -888,6 +887,74 @@ class StamperApp(ctk.CTk):
         continue  # Skip corrupted PDFs
 
     return len(files) + total_pages
+
+
+  def save_config(self):
+    """Saves the current settings to a json file."""
+    data = {
+      "stamp_path": self.stamp_path_entry.get(),
+      "input_dir": self.input_dir_entry.get(),
+      "output_dir": self.output_dir_entry.get(),
+      "append": self.append_entry.get(),
+      "marginX": self.margin_x,
+      "marginY": self.margin_y,
+      "threshold": self.threshold,
+      "start_pos": self.start_pos,
+      "search_dir": self.search_dir
+    }
+    with open("stamper-config.json", "w", encoding="utf-8") as f:
+      json.dump(data, f, indent=4)
+
+
+  def load_config(self):
+    """Loads the json config file."""
+    try:
+      with open("stamper-config.json", "r", encoding="utf-8") as f:
+        settings = json.load(f)
+
+        # Update the entry boxes.
+        self.edit_entry(self.stamp_path_entry,
+                        settings.get("stamp_path",Path.cwd()
+                                     / self.DEFAULT_STAMP_PATH))
+        self.edit_entry(self.input_dir_entry,
+                        settings.get("input_dir", Path.cwd()
+                                     / self.DEFAULT_INPUT_DIR))
+        self.edit_entry(self.output_dir_entry,
+                        settings.get("output_dir", Path.cwd()
+                                     / self.DEFAULT_OUTPUT_DIR))
+
+        # Load append value.
+        append_value = settings.get("append", "")
+        if append_value != "":
+          self.append_entry.insert(0, append_value)
+
+        # Extract margin X.
+        self.margin_x = settings.get("marginX", 20)
+        self.margin_x_entry.insert(0, self.margin_x)
+
+        # Extract margin Y.
+        self.margin_y = settings.get("marginY", 20)
+        self.margin_y_entry.insert(0, self.margin_y)
+
+        # Extract threshold.
+        self.threshold = settings.get("threshold", 1)
+        self.threshold_entry.insert(0, self.threshold)
+
+        # Extract and update start position.
+        self.start_pos = settings.get("start_pos", 8)
+        self.update_pos_selection(self.pos_buttons[self.start_pos])
+
+        # Extract and update search direction.
+        self.search_dir = settings.get("search_dir", 1)
+        self.update_dir_selection(self.dir_buttons[self.search_dir])
+    except FileNotFoundError:
+      # First time running, no settings yet, set default.
+      self.stamp_path_entry.insert(0, Path.cwd() / self.DEFAULT_STAMP_PATH)
+      self.input_dir_entry.insert(0, Path.cwd() / self.DEFAULT_INPUT_DIR)
+      self.output_dir_entry.insert(0, Path.cwd() / self.DEFAULT_OUTPUT_DIR)
+      self.margin_x_entry.insert(0, self.margin_x)
+      self.margin_y_entry.insert(0, self.margin_y)
+      self.threshold_entry.insert(0, self.threshold)
 
 
 if __name__ == "__main__":
