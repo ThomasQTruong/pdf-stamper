@@ -6,8 +6,9 @@
 """
 
 import os
-import sys
 import pymupdf
+import sys
+import threading
 import customtkinter as ctk
 from CTkToolTip import CTkToolTip
 from CTkMessagebox import CTkMessagebox
@@ -78,6 +79,7 @@ class StamperApp(ctk.CTk):
   threshold = 1
   start_pos = 8   # Starting position, default: bottom right (3x3 grid index).
   search_dir = 1  # Search direction, default: upwards (3x3 grid index).
+  progress = 0    # The progress of the app.
 
 
   def __init__(self):
@@ -399,22 +401,34 @@ class StamperApp(ctk.CTk):
     # Lock the button so the user can't press until the process is done.
     self.start_btn.configure(state="disabled")
 
+    # Run the program using a thread.
+    thread = threading.Thread(
+      target=self.run_stamper_thread,
+      args=(input_dir, output_dir, append_value),
+      daemon=True
+    )
+    thread.start()
+
+
+  def run_stamper_thread(self, input_dir, output_dir, append_value):
+    """
+    The stamper worker thread.
+
+    Args:
+      input_dir (Path): The input directory's path.
+      output_dir (Path): The output directory's path.
+      append_value (str): The value to append to the file name.
+    """
     # Counters
     success_count = 0
     warning_count = 0
     error_count = 0
 
-    # Amount of items in the directory (for progress bar).
-    item_total = sum(1 for _ in os.scandir(input_dir))
-
     # For each pdf in the target directory.
-    index = 0
+    self.progress = 0
     for pdf in input_dir.iterdir():
-      # Draw the progress bar (rate limited)!
-      index += 1
-      if index % 100 == 0 or index == item_total:
-        self.progress_bar.set(index/item_total)
-        self.update()
+      # Going through the file, add 1 to progress.
+      self.progress += 1
 
       # If it is not a file, skip it.
       if not pdf.is_file():
@@ -440,7 +454,19 @@ class StamperApp(ctk.CTk):
         warning_count += 1
       else:
         success_count += 1
+    self.after(0, lambda: self.finalize_stamper(success_count, warning_count,
+                                                error_count))
 
+
+  def finalize_stamper(self, success_count, warning_count, error_count):
+    """
+    Send results and unlock the button.
+
+    Args:
+      success_count (int): The amount of successful stamps.
+      warning_count (int): The amount of files skipped.
+      error_count (int): The amount of files failed.
+    """
     # Run has finished.
     self.send_output(f"Finished stamping {success_count} files with "
                      f"{warning_count} skipped and {error_count} errors.",
@@ -448,7 +474,6 @@ class StamperApp(ctk.CTk):
     self.stamper_output.see("end")
 
     # Unlock button; process is finished.
-    self.update()  # Flush the event queue.
     self.start_btn.configure(state="normal")
 
 
@@ -466,6 +491,7 @@ class StamperApp(ctk.CTk):
     # Open the pdf with pymupdf.
     doc = pymupdf.open(input_pdf)
     pages_to_stamp = range(1, len(doc) + 1)
+    input_dir = Path(self.input_dir_entry.get())
 
     try:
       with Image.open(self.stamp) as img:
@@ -475,6 +501,14 @@ class StamperApp(ctk.CTk):
       return 1
 
     for page_num in pages_to_stamp:
+      # Amount of items in the directory (for progress bar).
+      progress_total = self.get_progress_total(input_dir)
+
+      # Update progress.
+      self.progress += 1
+      self.after(0, lambda p=self.progress / progress_total:
+                 self.progress_bar.set(p))
+
       # PDF page indices start at 0.
       page = doc[page_num - 1]
 
@@ -630,6 +664,7 @@ class StamperApp(ctk.CTk):
       return True
     except ValueError:
       return False
+
 
   def validate_int(self, value):
     """
@@ -824,6 +859,35 @@ class StamperApp(ctk.CTk):
 
     # Passed through conditions, successfully found spot.
     return temp_rect
+
+
+  def get_progress_total(self, input_dir):
+    """
+    Retrives the progress total (file count + pages).
+
+    Args:
+      input_dir (Path): The input directory's path.
+    
+    Returns:
+      int: The progress total.
+    """
+
+    # Create a list of files.
+    files = list(input_dir.iterdir())
+
+    # Sum up all pages.
+    total_pages = 0
+    for file in files:
+      try:
+        # If it is a pdf file.
+        if file.is_file() and file.suffix.lower() == ".pdf":
+          # Add to sum.
+          with pymupdf.open(file) as doc:
+            total_pages += len(doc)
+      except (pymupdf.FileDataError, pymupdf.EmptyFileError):
+        continue  # Skip corrupted PDFs
+
+    return len(files) + total_pages
 
 
 if __name__ == "__main__":
