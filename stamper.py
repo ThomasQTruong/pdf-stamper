@@ -793,14 +793,19 @@ class StamperApp(ctk.CTk):
 
     # Diagonal search.
     if self.search_dir % 2 == 0:
-      # Figure out the end point to calculate slope.
+      # Figure out the end point.
       end_x = self.margin_x
-      if search_column == 2:
+      end_y = self.margin_y
+      if search_column == 1:
+        # Middle column.
+        end_x = rect.x0
+      elif search_column == 2:
         # Right column.
         end_x = br.x - self.margin_x - stamp_width
 
-      end_y = self.margin_y
-      if search_row == 2:
+      if search_row == 1:
+        end_y = rect.y0
+      elif search_row == 2:
         # Bottom row.
         end_y = br.y - self.margin_y - stamp_height
 
@@ -809,29 +814,68 @@ class StamperApp(ctk.CTk):
       dy = end_y - rect.y0
       distance = math.hypot(dx, dy)
 
+      # No distance to move, return original.
+      if distance == 0:
+        return rect
+
       # Apply to threshold.
       threshold_x = (dx / distance) * self.threshold
       threshold_y = (dy / distance) * self.threshold
 
-    # Search for a free slot using the selected direction.
-    temp_x0 = rect.x0
-    temp_y0 = rect.y0
-    temp_x1 = rect.x1
-    temp_y1 = rect.y1
-    while text_in_rect.strip():
-      temp_x0 += threshold_x
-      temp_y0 += threshold_y
-      temp_x1 += threshold_x
-      temp_y1 += threshold_y
-      temp_rect = pymupdf.Rect(temp_x0, temp_y0, temp_x1, temp_y1)
-      text_in_rect = page.get_text("text", clip=temp_rect)
-      # Search is out of bounds, return original rect.
-      if (self.is_out_of_bounds(temp_x0, temp_x1, br.x, self.margin_x) or
-          self.is_out_of_bounds(temp_y0, temp_y1, br.y, self.margin_y)):
-        return rect
+    # Obtain all the words in the search rect.
+    words = page.get_text("words")
+    # Extract the positions from the word and make a rect with it.
+    word_rects = [pymupdf.Rect(w[:4]) for w in words if w[4].strip()]
 
-    # Passed through conditions, successfully found spot.
-    return temp_rect
+    # Search for a free slot using the selected direction.
+    temp_x0 = rect.x0 + threshold_x
+    temp_y0 = rect.y0 + threshold_y
+    temp_x1 = rect.x1 + threshold_x
+    temp_y1 = rect.y1 + threshold_y
+    while (not self.is_out_of_bounds(temp_x0, temp_x1, br.x, self.margin_x) and
+          not self.is_out_of_bounds(temp_y0, temp_y1, br.y, self.margin_y)):
+      temp_rect = pymupdf.Rect(temp_x0, temp_y0, temp_x1, temp_y1)
+
+      collide = next((word for word in word_rects
+                      if temp_rect.intersects(word)), None)
+
+      # No collision! This is a valid spot.
+      if not collide:
+        return temp_rect
+
+      # Searching a cardinal direction.
+      if self.search_dir == 1:
+        # Searching up.
+        temp_x0 += threshold_x
+        temp_x1 += threshold_x
+        temp_y0 = temp_y0 - stamp_height
+        temp_y1 = collide.y0 - self.threshold
+      elif self.search_dir == 3:
+        # Searching left.
+        temp_x0 = temp_x0 - stamp_width
+        temp_x1 = collide.x0 - self.threshold
+        temp_y0 += threshold_y
+        temp_y1 += threshold_y
+      elif self.search_dir == 5:
+        # Searching right.
+        temp_x0 = collide.x1 + self.threshold
+        temp_x1 = temp_x0 + stamp_width
+        temp_y0 += threshold_y
+        temp_y1 += threshold_y
+      elif self.search_dir == 7:
+        # Searching down.
+        temp_x0 += threshold_x
+        temp_x1 += threshold_x
+        temp_y0 = collide.y1 + self.threshold
+        temp_y1 = temp_y0 + stamp_height
+      else:
+        temp_x0 += threshold_x
+        temp_x1 += threshold_x
+        temp_y0 += threshold_y
+        temp_y1 += threshold_y
+
+    # No spot found, return the original.
+    return rect
 
 
   def search_all(self, page, rect):
@@ -860,7 +904,7 @@ class StamperApp(ctk.CTk):
     # Obtain all the words in the page.
     words = page.get_text("words")
     # Extract the positions from the word and make a rect with it.
-    words_rects = [pymupdf.Rect(w[:4]) for w in words if w[4].strip()]
+    word_rects = [pymupdf.Rect(w[:4]) for w in words if w[4].strip()]
 
     # While temp_rect is not out of y-axis boundary.
     while not self.is_out_of_bounds(temp_y0, temp_y1, br.y, self.margin_y):
@@ -871,7 +915,7 @@ class StamperApp(ctk.CTk):
       while not self.is_out_of_bounds(temp_x0, temp_x1, br.x, self.margin_x):
         # Create the rectangle for the current test spot.
         temp_rect = pymupdf.Rect(temp_x0, temp_y0, temp_x1, temp_y1)
-        collide = next((word for word in words_rects
+        collide = next((word for word in word_rects
                         if temp_rect.intersects(word)), None)
 
         # No collision! This is a valid spot.
