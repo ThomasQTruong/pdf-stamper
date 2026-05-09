@@ -773,6 +773,8 @@ class StamperApp(ctk.CTk):
     if not text_in_rect.strip():
       return rect
     br = page.rect.br
+    stamp_width = rect.x1 - rect.x0
+    stamp_height = rect.y1 - rect.y0
     search_row = int(self.search_dir / 3)
     search_column = self.search_dir % 3
 
@@ -792,13 +794,13 @@ class StamperApp(ctk.CTk):
     # Diagonal search.
     if self.search_dir % 2 == 0:
       # Figure out the end point to calculate slope.
-      stamp_width = rect.x1 - rect.x0
-      stamp_height = rect.y1 - rect.y0
-      end_x = self.margin_x
-      end_y = self.margin_y
-      if self.margin_x == rect.x0:
+      end_x = self.margin_x + stamp_width
+      if search_column == 2:
+        # Right column.
         end_x = br.x - self.margin_x - stamp_width
-      if self.margin_y == rect.y0:
+      end_y = self.margin_y + stamp_height
+      if search_row == 2:
+        # Bottom row.
         end_y = br.y - self.margin_y - stamp_height
 
       # Calculate the hypotenuse.
