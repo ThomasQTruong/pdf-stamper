@@ -794,11 +794,12 @@ class StamperApp(ctk.CTk):
     # Diagonal search.
     if self.search_dir % 2 == 0:
       # Figure out the end point to calculate slope.
-      end_x = self.margin_x + stamp_width
+      end_x = self.margin_x
       if search_column == 2:
         # Right column.
         end_x = br.x - self.margin_x - stamp_width
-      end_y = self.margin_y + stamp_height
+
+      end_y = self.margin_y
       if search_row == 2:
         # Bottom row.
         end_y = br.y - self.margin_y - stamp_height
