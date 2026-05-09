@@ -847,33 +847,44 @@ class StamperApp(ctk.CTk):
     if not text_in_rect.strip():
       return rect
     br = page.rect.br
+    stamp_width = rect.x1 - rect.x0
+    stamp_height = rect.y1 - rect.y0
 
     # Start from the top-left corner.
     temp_y0 = self.margin_y
-    temp_y1 = temp_y0 + rect.y1 - rect.y0
+    temp_y1 = temp_y0 + stamp_height
 
-    # While text is in the way and y-axis is not out.
-    while text_in_rect.strip():
+    # Obtain all the words in the page.
+    words = page.get_text("words")
+    # Extract the positions from the word and make a rect with it.
+    words_rects = [pymupdf.Rect(w[:4]) for w in words if w[4].strip()]
+
+    # While temp_rect is not out of y-axis boundary.
+    while not self.is_out_of_bounds(temp_y0, temp_y1, br.y, self.margin_y):
       temp_x0 = self.margin_x
-      temp_x1 = temp_x0 + rect.x1 - rect.x0
-      # While while text is in the way in the column.
-      while text_in_rect.strip():
+      temp_x1 = temp_x0 + stamp_width
+
+      # While temp_rect is not out of x-axis boundary.
+      while not self.is_out_of_bounds(temp_x0, temp_x1, br.x, self.margin_x):
+        # Create the rectangle for the current test spot.
         temp_rect = pymupdf.Rect(temp_x0, temp_y0, temp_x1, temp_y1)
-        text_in_rect = page.get_text("text", clip=temp_rect)
-        # X-axis is out of bounds, check next row.
-        if self.is_out_of_bounds(temp_x0, temp_x1, br.x, self.margin_x):
-          break
-        # Move x/y by the threshold.
-        temp_x0 += self.threshold
-        temp_x1 += self.threshold
-      # Y-axis is out of bounds, return original rect (couldn't find any).
-      if self.is_out_of_bounds(temp_y0, temp_y1, br.y, self.margin_y):
-        return rect
+        collide = next((word for word in words_rects
+                        if temp_rect.intersects(word)), None)
+
+        # No collision! This is a valid spot.
+        if not collide:
+          return temp_rect
+
+        # Move right by the threshold
+        temp_x0 = collide.x1 + self.threshold
+        temp_x1 = temp_x0 + stamp_width
+
+      # Move down to the next row by the threshold
       temp_y0 += self.threshold
       temp_y1 += self.threshold
 
-    # Passed through conditions, successfully found spot.
-    return temp_rect
+    # No spot found, return original.
+    return rect
 
 
   def get_progress_total(self, input_dir):
