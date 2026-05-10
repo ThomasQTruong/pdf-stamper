@@ -76,6 +76,7 @@ class StamperApp(ctk.CTk):
 
   # App settings.
   stamp = None
+  padding = 20
   margin_x = 20
   margin_y = 20
   threshold = 1
@@ -90,7 +91,7 @@ class StamperApp(ctk.CTk):
 
     # App settings.
     self.title("PDF Stamper")           # Set the title of the app.
-    self.geometry("600x400")            # Set app size.
+    self.geometry("700x420")            # Set app size.
     self.resizable(0, 0)                # Make app unresizeable.
     self.after(200, self.set_app_icon)  # Set the app icon.
 
@@ -99,6 +100,7 @@ class StamperApp(ctk.CTk):
     self.input_dir_entry = None
     self.output_dir_entry = None
     self.append_entry = None
+    self.padding_entry = None
     self.threshold_entry = None
     self.margin_x_entry = None
     self.margin_y_entry = None
@@ -185,35 +187,45 @@ class StamperApp(ctk.CTk):
                                      placeholder_text="i.e. _stamped")
     self.append_entry.grid(row=0, column=0, sticky="nesw",
                            padx=self.PAD_X, pady=(self.PAD_Y, 0))
+    # Padding settings.
+    self.padding_label = ctk.CTkLabel(extra_settings_frame, text="Padding:",
+                                      font=self.LABEL_FONT)
+    self.padding_label.grid(row=0, column=1, sticky="nesw",
+                            padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
+    self.padding_entry = ctk.CTkEntry(extra_settings_frame, corner_radius=0,
+                        validate="key", validatecommand=(self.vcmd_float, "%P"),
+                        width=50, placeholder_text="i.e.: 20")
+    self.padding_entry.grid(row=0, column=2, sticky="nesw",
+                            padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     # MarginX settings.
     margin_x_label = ctk.CTkLabel(extra_settings_frame, text="MarginX:",
                                 font=self.LABEL_FONT)
-    margin_x_label.grid(row=0, column=1, sticky="nes",
+    margin_x_label.grid(row=0, column=3, sticky="nes",
                         padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     self.margin_x_entry = ctk.CTkEntry(extra_settings_frame, corner_radius=0,
                         validate="key", validatecommand=(self.vcmd_float, "%P"),
                         width=50, placeholder_text="i.e.: 20")
-    self.margin_x_entry.grid(row=0, column=2, sticky="nesw",
+    self.margin_x_entry.grid(row=0, column=4, sticky="nesw",
                              padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     # MarginY settings.
     marginy_y_label = ctk.CTkLabel(extra_settings_frame, text="MarginY:",
                                 font=self.LABEL_FONT)
-    marginy_y_label.grid(row=0, column=3, sticky="nes",
+    marginy_y_label.grid(row=0, column=5, sticky="nes",
                          padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     self.margin_y_entry = ctk.CTkEntry(extra_settings_frame, corner_radius=0,
                         validate="key", validatecommand=(self.vcmd_float, "%P"),
                         width=50, placeholder_text="i.e.: 20")
-    self.margin_y_entry.grid(row=0, column=4, sticky="nesw",
+    self.margin_y_entry.grid(row=0, column=6, sticky="nesw",
                              padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     # Threshold settings section.
     threshold_label = ctk.CTkLabel(extra_settings_frame, text="Threshold:",
                                    font=self.LABEL_FONT)
-    threshold_label.grid(row=0, column=5, sticky="nes",
+    threshold_label.grid(row=0, column=7, sticky="nes",
                          padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     self.threshold_entry = ctk.CTkEntry(extra_settings_frame, corner_radius=0,
                           validate="key", validatecommand=(self.vcmd_int, "%P"),
-                          width=50, placeholder_text="i.e.: 0")
-    self.threshold_entry.grid(row=0, column=6, sticky="nesw",
+                          width=35, placeholder_text="i.e.: 0")
+    self.threshold_entry.grid(row=0, column=8, sticky="nesw",
                               pady=(self.PAD_Y, 0))
 
     # Tool tips.
@@ -225,6 +237,8 @@ class StamperApp(ctk.CTk):
     CTkToolTip(self.append_entry, "Add certain text to the end of the file " +
                                   "name.\ni.e. \'_stamped\' would result in " +
                                   "\'file.pdf\' => \'file_stamped.pdf\'")
+    CTkToolTip(self.padding_entry, "The spacing (x/y axis) between the stamp " +
+                                   "and the file's text.")
     CTkToolTip(self.margin_x_entry, "The x-axis spacing of the stamp away " +
                                     "from the page left/right edges.")
     CTkToolTip(self.margin_y_entry, "The y-axis spacing of the stamp away " +
@@ -378,10 +392,14 @@ class StamperApp(ctk.CTk):
     input_dir = Path(self.input_dir_entry.get())
     output_dir = Path(self.output_dir_entry.get())
     append_value = self.append_entry.get()
+    self.padding = self.padding_entry.get().strip()
     self.margin_x = self.margin_x_entry.get().strip()
     self.margin_y = self.margin_y_entry.get().strip()
     self.threshold = self.threshold_entry.get().strip()
     # Validate values.
+    if self.padding == "":
+      self.padding = 0
+      self.edit_entry(self.padding_entry, "0")
     if self.margin_x == "":
       self.margin_x = 0
       self.edit_entry(self.margin_x_entry, "0")
@@ -393,13 +411,15 @@ class StamperApp(ctk.CTk):
       self.edit_entry(self.threshold_entry, "0")
 
     try:
+      self.padding = float(self.padding)
       self.margin_x = float(self.margin_x)
       self.margin_y = float(self.margin_y)
       self.threshold = int(self.threshold)
     except ValueError:
-      self.send_output(f"[ERROR] marginX: {self.margin_x}, marginY: " +
-                       f"{self.margin_y}, or threshold: {self.threshold} " +
-                       "is invalid.", "error")
+      self.send_output(f"[ERROR] padding: {self.padding}, marginX: " +
+                       f"{self.margin_x}, marginY: {self.margin_y}, " +
+                       f"or threshold: {self.threshold} is invalid.",
+                       "error")
       return
 
     if not input_dir.exists():
@@ -508,6 +528,8 @@ class StamperApp(ctk.CTk):
     try:
       with Image.open(self.stamp) as img:
         stamp_width, stamp_height = img.size
+        stamp_width += self.padding * 2   # Left and right padding.
+        stamp_height += self.padding * 2  # Top and bottom padding.
     except FileNotFoundError:
       self.send_output(f"[Error] \'{self.stamp}\' is missing!", "error")
       return 1
@@ -575,7 +597,13 @@ class StamperApp(ctk.CTk):
           # Search normally.
           rect = self.search(page, rect)
 
-      page.insert_image(rect, filename=self.stamp)
+      # Clean the padding off before stamping for a centered insertion.
+      offset = self.padding / 2
+      clean_rect = pymupdf.Rect(rect.x0 + offset,
+                                rect.y0 + offset,
+                                rect.x1 - offset,
+                                rect.y1 - offset)
+      page.insert_image(clean_rect, filename=self.stamp)
 
     doc.save(output_pdf)
     doc.close()
@@ -828,51 +856,52 @@ class StamperApp(ctk.CTk):
     word_rects = [pymupdf.Rect(w[:4]) for w in words if w[4].strip()]
 
     # Search for a free slot using the selected direction.
-    temp_x0 = rect.x0 + threshold_x
-    temp_y0 = rect.y0 + threshold_y
-    temp_x1 = rect.x1 + threshold_x
-    temp_y1 = rect.y1 + threshold_y
-    while (not self.is_out_of_bounds(temp_x0, temp_x1, br.x, self.margin_x) and
-          not self.is_out_of_bounds(temp_y0, temp_y1, br.y, self.margin_y)):
-      temp_rect = pymupdf.Rect(temp_x0, temp_y0, temp_x1, temp_y1)
+    search_x0 = rect.x0 + threshold_x
+    search_y0 = rect.y0 + threshold_y
+    search_x1 = rect.x1 + threshold_x
+    search_y1 = rect.y1 + threshold_y
+    while (not self.is_out_of_bounds(search_x0, search_x1,
+                                     br.x, self.margin_x) and not
+          self.is_out_of_bounds(search_y0, search_y1, br.y, self.margin_y)):
+      search_rect = pymupdf.Rect(search_x0, search_y0, search_x1, search_y1)
 
       collide = next((word for word in word_rects
-                      if temp_rect.intersects(word)), None)
+                      if search_rect.intersects(word)), None)
 
       # No collision! This is a valid spot.
       if not collide:
-        return temp_rect
+        return search_rect
 
       # Searching a cardinal direction.
       if self.search_dir == 1:
         # Searching up.
-        temp_x0 += threshold_x
-        temp_x1 += threshold_x
-        temp_y0 = temp_y0 - stamp_height
-        temp_y1 = collide.y0 - self.threshold
+        search_x0 += threshold_x
+        search_x1 += threshold_x
+        search_y0 = search_y0 - stamp_height
+        search_y1 = collide.y0 - self.threshold
       elif self.search_dir == 3:
         # Searching left.
-        temp_x0 = temp_x0 - stamp_width
-        temp_x1 = collide.x0 - self.threshold
-        temp_y0 += threshold_y
-        temp_y1 += threshold_y
+        search_x0 = search_x0 - stamp_width
+        search_x1 = collide.x0 - self.threshold
+        search_y0 += threshold_y
+        search_y1 += threshold_y
       elif self.search_dir == 5:
         # Searching right.
-        temp_x0 = collide.x1 + self.threshold
-        temp_x1 = temp_x0 + stamp_width
-        temp_y0 += threshold_y
-        temp_y1 += threshold_y
+        search_x0 = collide.x1 + self.threshold
+        search_x1 = search_x0 + stamp_width
+        search_y0 += threshold_y
+        search_y1 += threshold_y
       elif self.search_dir == 7:
         # Searching down.
-        temp_x0 += threshold_x
-        temp_x1 += threshold_x
-        temp_y0 = collide.y1 + self.threshold
-        temp_y1 = temp_y0 + stamp_height
+        search_x0 += threshold_x
+        search_x1 += threshold_x
+        search_y0 = collide.y1 + self.threshold
+        search_y1 = search_y0 + stamp_height
       else:
-        temp_x0 += threshold_x
-        temp_x1 += threshold_x
-        temp_y0 += threshold_y
-        temp_y1 += threshold_y
+        search_x0 += threshold_x
+        search_x1 += threshold_x
+        search_y0 += threshold_y
+        search_y1 += threshold_y
 
     # No spot found, return the original.
     return rect
@@ -898,37 +927,38 @@ class StamperApp(ctk.CTk):
     stamp_height = rect.y1 - rect.y0
 
     # Start from the top-left corner.
-    temp_y0 = self.margin_y
-    temp_y1 = temp_y0 + stamp_height
+    search_y0 = self.margin_y
+    search_y1 = search_y0 + stamp_height
 
     # Obtain all the words in the page.
     words = page.get_text("words")
     # Extract the positions from the word and make a rect with it.
     word_rects = [pymupdf.Rect(w[:4]) for w in words if w[4].strip()]
 
-    # While temp_rect is not out of y-axis boundary.
-    while not self.is_out_of_bounds(temp_y0, temp_y1, br.y, self.margin_y):
-      temp_x0 = self.margin_x
-      temp_x1 = temp_x0 + stamp_width
+    # While search_rect is not out of y-axis boundary.
+    while not self.is_out_of_bounds(search_y0, search_y1, br.y, self.margin_y):
+      search_x0 = self.margin_x
+      search_x1 = search_x0 + stamp_width
 
-      # While temp_rect is not out of x-axis boundary.
-      while not self.is_out_of_bounds(temp_x0, temp_x1, br.x, self.margin_x):
+      # While search_rect is not out of x-axis boundary.
+      while not self.is_out_of_bounds(search_x0, search_x1,
+                                      br.x, self.margin_x):
         # Create the rectangle for the current test spot.
-        temp_rect = pymupdf.Rect(temp_x0, temp_y0, temp_x1, temp_y1)
+        search_rect = pymupdf.Rect(search_x0, search_y0, search_x1, search_y1)
         collide = next((word for word in word_rects
-                        if temp_rect.intersects(word)), None)
+                        if search_rect.intersects(word)), None)
 
         # No collision! This is a valid spot.
         if not collide:
-          return temp_rect
+          return search_rect
 
         # Move right by the threshold
-        temp_x0 = collide.x1 + self.threshold
-        temp_x1 = temp_x0 + stamp_width
+        search_x0 = collide.x1 + self.threshold
+        search_x1 = search_x0 + stamp_width
 
       # Move down to the next row by the threshold
-      temp_y0 += self.threshold
-      temp_y1 += self.threshold
+      search_y0 += self.threshold
+      search_y1 += self.threshold
 
     # No spot found, return original.
     return rect
@@ -969,6 +999,7 @@ class StamperApp(ctk.CTk):
       "input_dir": self.input_dir_entry.get(),
       "output_dir": self.output_dir_entry.get(),
       "append": self.append_entry.get(),
+      "padding": self.padding, 
       "marginX": self.margin_x,
       "marginY": self.margin_y,
       "threshold": self.threshold,
@@ -1001,30 +1032,35 @@ class StamperApp(ctk.CTk):
         if append_value != "":
           self.append_entry.insert(0, append_value)
 
-        # Extract margin X.
-        self.margin_x = settings.get("marginX", 20)
+        # Load padding.
+        self.padding = settings.get("padding", self.padding)
+        self.padding_entry.insert(0, self.padding)
+
+        # Load margin X.
+        self.margin_x = settings.get("marginX", self.margin_x)
         self.margin_x_entry.insert(0, self.margin_x)
 
-        # Extract margin Y.
-        self.margin_y = settings.get("marginY", 20)
+        # Load margin Y.
+        self.margin_y = settings.get("marginY", self.margin_y)
         self.margin_y_entry.insert(0, self.margin_y)
 
-        # Extract threshold.
-        self.threshold = settings.get("threshold", 1)
+        # Load threshold.
+        self.threshold = settings.get("threshold", self.threshold)
         self.threshold_entry.insert(0, self.threshold)
 
-        # Extract and update start position.
-        self.start_pos = settings.get("start_pos", 8)
+        # Load and update start position.
+        self.start_pos = settings.get("start_pos", self.start_pos)
         self.update_pos_selection(self.pos_buttons[self.start_pos])
 
-        # Extract and update search direction.
-        self.search_dir = settings.get("search_dir", 1)
+        # Load and update search direction.
+        self.search_dir = settings.get("search_dir", self.search_dir)
         self.update_dir_selection(self.dir_buttons[self.search_dir])
     except FileNotFoundError:
       # First time running, no settings yet, set default.
       self.stamp_path_entry.insert(0, Path.cwd() / self.DEFAULT_STAMP_PATH)
       self.input_dir_entry.insert(0, Path.cwd() / self.DEFAULT_INPUT_DIR)
       self.output_dir_entry.insert(0, Path.cwd() / self.DEFAULT_OUTPUT_DIR)
+      self.padding_entry.insert(0, self.padding)
       self.margin_x_entry.insert(0, self.margin_x)
       self.margin_y_entry.insert(0, self.margin_y)
       self.threshold_entry.insert(0, self.threshold)
