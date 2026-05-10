@@ -3,4 +3,3 @@ Pillow>=10.0.0
 pyinstaller>=6.0.0
 pymupdf>=1.24.11
 CTkToolTip>=0.9
-CTkMessagebox>=2.7
