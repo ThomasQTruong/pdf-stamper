@@ -90,7 +90,7 @@ class StamperApp(ctk.CTk):
 
     # App settings.
     self.title("PDF Stamper")           # Set the title of the app.
-    self.geometry("700x420")            # Set app size.
+    self.geometry("680x400")            # Set app size.
     self.resizable(0, 0)                # Make app unresizeable.
     self.after(200, self.set_app_icon)  # Set the app icon.
 
@@ -193,7 +193,7 @@ class StamperApp(ctk.CTk):
                             padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     self.padding_entry = ctk.CTkEntry(extra_settings_frame, corner_radius=0,
                         validate="key", validatecommand=(self.vcmd_float, "%P"),
-                        width=50, placeholder_text="i.e.: 20")
+                        width=40, placeholder_text="i.e.: 20")
     self.padding_entry.grid(row=0, column=2, sticky="nesw",
                             padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     # MarginX settings.
@@ -203,7 +203,7 @@ class StamperApp(ctk.CTk):
                         padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     self.margin_x_entry = ctk.CTkEntry(extra_settings_frame, corner_radius=0,
                         validate="key", validatecommand=(self.vcmd_float, "%P"),
-                        width=50, placeholder_text="i.e.: 20")
+                        width=40, placeholder_text="i.e.: 20")
     self.margin_x_entry.grid(row=0, column=4, sticky="nesw",
                              padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     # MarginY settings.
@@ -213,7 +213,7 @@ class StamperApp(ctk.CTk):
                          padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     self.margin_y_entry = ctk.CTkEntry(extra_settings_frame, corner_radius=0,
                         validate="key", validatecommand=(self.vcmd_float, "%P"),
-                        width=50, placeholder_text="i.e.: 20")
+                        width=40, placeholder_text="i.e.: 20")
     self.margin_y_entry.grid(row=0, column=6, sticky="nesw",
                              padx=(0, self.PAD_X), pady=(self.PAD_Y, 0))
     # Threshold settings section.
