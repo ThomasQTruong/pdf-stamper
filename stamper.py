@@ -63,6 +63,7 @@ class StamperApp(ctk.CTk):
   """
 
   # App constants.
+  VERSION = "2.0.0"
   FONT_FAMILY = "Segoe UI"
   SECTION_FONT = (FONT_FAMILY, 18, "bold")
   LABEL_FONT = (FONT_FAMILY, 16)   # Single-line.
@@ -92,7 +93,8 @@ class StamperApp(ctk.CTk):
     super().__init__()
 
     # App settings.
-    self.title("PDF Stamper")           # Set the title of the app.
+    # Set the title of the app.
+    self.title(f"PDF Stamper v{self.VERSION}")
     self.geometry("680x400")            # Set app size.
     self.resizable(0, 0)                # Make app unresizeable.
     self.after(200, self.set_app_icon)  # Set the app icon.
