@@ -27,13 +27,15 @@ Mass stamps files in a specified folder with a specified stamp img.
    - `Output`: The folder to output the stamped files to (default: `./output/`).
    - `Append`: Add certain text to the end of the file name.
      - i.e. Append = `_stamped` would result in `file.pdf` => `file_stamped.pdf`
+   - `Padding`: The x/y axis spacing between the stamp and the page's texts (default: `20`).
    - `MarginX`: The x-axis spacing of the stamp away from the page left/right edges (default: `20`).
    - `MarginY`: The y-axis spacing of the stamp away from the page top/bottom edges (default: `20`).
    - `Threshold`: The search threshold for finding an empty space to stamp (default: `1`).
      - Only stamps on the right side, starts from bottom then searches upward for space.
-     - Set to `0` if you do not want it to search for any space; fixed stamp at bottom-right.
-   - `Stamp Position`: The position on a 3x3 grid of where to stamp.
-   - `Search Direction`: The direction to search for an empty spot to stamp.
+     - Set to `0` to disable searching.
+   - `Stamp Position`: The position on a 3x3 grid of where to stamp (default: bottom-right).
+   - `Search Direction`: The direction to search for an empty spot to stamp (default: up).
+     - Set to `Threshold` to `0` to disable.
 6. Click start and the files should be stamped!
    - <img src=".assets/docs/stamper-output.png" width="300" title="PDF Stamper Output">
    - <img src=".assets/docs/stamped-example.png" width="300" title="PDF Stamped">

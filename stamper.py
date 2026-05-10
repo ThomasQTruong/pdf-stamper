@@ -43,12 +43,14 @@ class StamperApp(ctk.CTk):
         stamped file to (default: ./output/).
     append_entry (ctk.CTkEntry): Input field, the string to append to the output
         file.
-    threshold_entry (ctk.CTkEntry): Input field, the search threshold for
-        finding a whitespace to stamp (default: 1, disable = 0).
+    padding_entry (ctk.CTkEntry): Input field, the x/y axis spacing between
+        the stamp and the page's texts.
     margin_x_entry (ctk.CTkEntry): Input field, the x-axis spacing of the stamp
         away from the page left/right edges.
     margin_y_entry (ctk.CTkEntry): Input field, the y-axis spacing of the stamp
         away from the page top/bottom edges.
+    threshold_entry (ctk.CTkEntry): Input field, the search threshold for
+        finding a whitespace to stamp (default: 1, disable = 0).
     pos_buttons (list[ctk.CTkButton]): A collection of 9 buttons representing
         the stamp position grid.
     dir_buttons (list[ctk.CTkButton]): A collection of 9 buttons representing
@@ -61,10 +63,11 @@ class StamperApp(ctk.CTk):
   """
 
   # App constants.
-  FONT_FAMILY = "Roboto"
+  FONT_FAMILY = "Segoe UI"
   SECTION_FONT = (FONT_FAMILY, 18, "bold")
-  LABEL_FONT = (FONT_FAMILY, 16)  # Single-line.
+  LABEL_FONT = (FONT_FAMILY, 16)   # Single-line.
   LABEL2_FONT = (FONT_FAMILY, 12)  # Multi-line / sub-header.
+  ENTRY_FONT = (FONT_FAMILY, 16)
   BUTTON_FONT = (FONT_FAMILY, 14, "bold")   # Normal button.
   BUTTON2_FONT = (FONT_FAMILY, 10, "bold")  # Small button.
   PAD_X = 7  # X-axis padding.
@@ -236,8 +239,8 @@ class StamperApp(ctk.CTk):
     CTkToolTip(self.append_entry, "Add certain text to the end of the file " +
                                   "name.\ni.e. \'_stamped\' would result in " +
                                   "\'file.pdf\' => \'file_stamped.pdf\'")
-    CTkToolTip(self.padding_entry, "The spacing (x/y axis) between the stamp " +
-                                   "and the file's text.")
+    CTkToolTip(self.padding_entry, "The x/y axis spacing between the stamp " +
+                                   "and the page's text.")
     CTkToolTip(self.margin_x_entry, "The x-axis spacing of the stamp away " +
                                     "from the page left/right edges.")
     CTkToolTip(self.margin_y_entry, "The y-axis spacing of the stamp away " +
@@ -270,7 +273,7 @@ class StamperApp(ctk.CTk):
     frame.grid_columnconfigure(0, weight=1)
 
     # Path entry.
-    entry = ctk.CTkEntry(frame, font=self.LABEL_FONT,
+    entry = ctk.CTkEntry(frame, font=self.ENTRY_FONT,
                          border_width=0, corner_radius=0,
                          fg_color=("gray80", "gray20"))
     entry.grid(row=0, column=0, sticky="nesw",
@@ -336,7 +339,7 @@ class StamperApp(ctk.CTk):
     for i in range(3):
       for j in range(3):
         dir_button = ctk.CTkButton(dir_frame, text="", corner_radius=0,
-                            width=32, fg_color="gray", border_width=1,
+                            width=36, fg_color="gray", border_width=1,
                             command=lambda b=None: self.update_pos_selection(b))
         dir_button.index = i * 3 + j
         dir_button.configure(command=lambda b=dir_button:
