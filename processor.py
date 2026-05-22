@@ -2,7 +2,7 @@
 
 import math
 import pymupdf
-from PIL import Image
+from stamp import Stamp
 
 
 class PDFProcessor:
@@ -45,6 +45,15 @@ class PDFProcessor:
         warning_count = 0
         error_count = 0
 
+        # Open the stamp.
+        stamp = Stamp(self.config["stamp_path"], self.config["padding"])
+        # Stamp was unable to initialize.
+        if stamp is None:
+            if self.output_callback:
+                self.output_callback(
+                    f"[Error] '{self.config['stamp_path']}' is missing!", "error"
+                )
+
         # For each pdf in the target directory.
         self.current_progress = 0
         progress_total = self.get_progress_total(input_dir)
@@ -70,7 +79,7 @@ class PDFProcessor:
             output_pdf = output_dir / output_name
 
             # Add the stamp to the pdf.
-            success = self.add_stamp(pdf, output_pdf, progress_total)
+            success = self.add_stamp(stamp, pdf, output_pdf, progress_total)
             if success == 1:
                 # Returned 1, there was an error.
                 error_count += 1
@@ -82,10 +91,11 @@ class PDFProcessor:
 
         return success_count, warning_count, error_count
 
-    def add_stamp(self, input_pdf, output_pdf, progress_total):
+    def add_stamp(self, stamp, input_pdf, output_pdf, progress_total):
         """Stamps all pages of a single PDF file.
 
         Args:
+            stamp (Stamp): Stamp object that contains all the stamp data.
             input_pdf (Path): Path to the source PDF file.
             output_pdf (Path): Path where the stamped PDF will be saved.
             progress_total (int): Total steps for progress bar calculation.
@@ -103,19 +113,6 @@ class PDFProcessor:
                 )
             return 1
 
-        try:
-            with Image.open(self.config["stamp_path"]) as img:
-                stamp_width, stamp_height = img.size
-                stamp_width += self.config["padding"] * 2  # Left and right padding.
-                stamp_height += self.config["padding"] * 2  # Top and bottom padding.
-        except FileNotFoundError:
-            if self.output_callback:
-                self.output_callback(
-                    f"[Error] '{self.config['stamp_path']}' is missing!", "error"
-                )
-            doc.close()
-            return 1
-
         for page_num in range(1, len(doc) + 1):
             # Update progress.
             self.current_progress += 1
@@ -129,29 +126,29 @@ class PDFProcessor:
             br = page.rect.br
             x0 = self.config["margin_x"]
             y0 = self.config["margin_y"]
-            x1 = x0 + stamp_width
-            y1 = y0 + stamp_height
+            x1 = x0 + stamp.width
+            y1 = y0 + stamp.height
             start_row = int(self.config["start_pos"] / 3)
             start_column = self.config["start_pos"] % 3
 
             # Set x-value based on column.
             if start_column == 1:
                 # Middle column, center the stamp.
-                x0 = (br.x - stamp_width) / 2
-                x1 = x0 + stamp_width
+                x0 = (br.x - stamp.width) / 2
+                x1 = x0 + stamp.width
             elif start_column == 2:
                 # Right column.
-                x0 = br.x - self.config["margin_x"] - stamp_width
+                x0 = br.x - self.config["margin_x"] - stamp.width
                 x1 = br.x - self.config["margin_x"]
 
             # Set y-value based on row.
             if start_row == 1:
                 # Middle row.
-                y0 = (br.y - stamp_height) / 2
-                y1 = y0 + stamp_height
+                y0 = (br.y - stamp.height) / 2
+                y1 = y0 + stamp.height
             elif start_row == 2:
                 # Bottom row.
-                y0 = br.y - self.config["margin_y"] - stamp_height
+                y0 = br.y - self.config["margin_y"] - stamp.height
                 y1 = br.y - self.config["margin_y"]
 
             # Check margin x/y values.
@@ -159,7 +156,7 @@ class PDFProcessor:
                 if self.output_callback:
                     self.output_callback(
                         f"[Skipped] Out of Bounds: marginX ({self.config['margin_x']})"
-                        f" or stamp width ({stamp_width}) is too high for"
+                        f" or stamp width ({stamp.width}) is too high for"
                         + f" the page width ({br.x})!",
                         "warning",
                     )
@@ -169,7 +166,7 @@ class PDFProcessor:
                 if self.output_callback:
                     self.output_callback(
                         f"[Skipped] Out of Bounds: marginY ({self.config['margin_y']})"
-                        + f" or stamp height ({stamp_height}) is too high for"
+                        + f" or stamp height ({stamp.height}) is too high for"
                         + f" the page height ({br.y})!",
                         "warning",
                     )
@@ -184,7 +181,7 @@ class PDFProcessor:
                     rect = self.search_all(page, rect)
                 else:
                     # Search normally.
-                    rect = self.search(page, rect, br, stamp_width, stamp_height)
+                    rect = self.search(page, rect, br, [stamp.width, stamp.height])
 
             # Clean the padding off before stamping for a centered insertion.
             offset = self.config["padding"] / 2
@@ -197,15 +194,14 @@ class PDFProcessor:
         doc.close()
         return 0
 
-    def search(self, page, rect, br, stamp_width, stamp_height):
+    def search(self, page, rect, br, stamp_size):
         """Searches for an empty spot to stamp at the selected direction.
 
         Args:
             page (pymupdf.Page): The document page to search on.
             rect (pymupdf.Rect): The rectangle where the stamp goes.
             br (pymupdf.Point): The bottom-right point of the page.
-            stamp_width (float): The width of the stamp including padding.
-            stamp_height (float): The height of the stamp including padding.
+            stamp_size (list[float]): A list containing [stamp_width, stamp_height].
 
         Returns:
             pymupdf.Rect: The rect with the found position, else original rect.
@@ -241,13 +237,13 @@ class PDFProcessor:
                 end_x = rect.x0
             elif search_column == 2:
                 # Right column.
-                end_x = br.x - self.config["margin_x"] - stamp_width
+                end_x = br.x - self.config["margin_x"] - stamp_size[0]
 
             if search_row == 1:
                 end_y = rect.y0
             elif search_row == 2:
                 # Bottom row.
-                end_y = br.y - self.config["margin_y"] - stamp_height
+                end_y = br.y - self.config["margin_y"] - stamp_size[1]
 
             # Calculate the hypotenuse.
             dx = end_x - rect.x0
@@ -292,18 +288,18 @@ class PDFProcessor:
                 # Searching up.
                 search_x0 += threshold_x
                 search_x1 += threshold_x
-                search_y0 = search_y0 - stamp_height
+                search_y0 = search_y0 - stamp_size[1]
                 search_y1 = collide.y0 - self.config["threshold"]
             elif self.config["search_dir"] == 3:
                 # Searching left.
-                search_x0 = search_x0 - stamp_width
+                search_x0 = search_x0 - stamp_size[0]
                 search_x1 = collide.x0 - self.config["threshold"]
                 search_y0 += threshold_y
                 search_y1 += threshold_y
             elif self.config["search_dir"] == 5:
                 # Searching right.
                 search_x0 = collide.x1 + self.config["threshold"]
-                search_x1 = search_x0 + stamp_width
+                search_x1 = search_x0 + stamp_size[0]
                 search_y0 += threshold_y
                 search_y1 += threshold_y
             elif self.config["search_dir"] == 7:
@@ -311,7 +307,7 @@ class PDFProcessor:
                 search_x0 += threshold_x
                 search_x1 += threshold_x
                 search_y0 = collide.y1 + self.config["threshold"]
-                search_y1 = search_y0 + stamp_height
+                search_y1 = search_y0 + stamp_size[1]
             else:
                 search_x0 += threshold_x
                 search_x1 += threshold_x
