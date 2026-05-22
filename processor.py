@@ -172,10 +172,7 @@ class PDFProcessor:
 
             # Clean the padding off before stamping for a centered insertion.
             offset = self.config["padding"] / 2
-            rect.x0 += offset
-            rect.y0 += offset
-            rect.x1 -= offset
-            rect.y1 -= offset
+            rect += (offset, offset, -offset, -offset)
             page.insert_image(rect, filename=self.config["stamp_path"])
 
         doc.save(output_pdf)
@@ -198,21 +195,12 @@ class PDFProcessor:
         if not page.get_text("text", clip=rect).strip():
             return rect
 
-        search_row = int(self.config["search_dir"] / 3)
         search_column = self.config["search_dir"] % 3
+        search_row = int(self.config["search_dir"] / 3)
 
-        # Calculate threshold based on direction.
-        threshold_x = self.config["threshold"]
-        if search_column == 0:  # Left column.
-            threshold_x *= -1
-        elif search_column % 3 == 1:  # Middle column.
-            threshold_x = 0
-
-        threshold_y = self.config["threshold"]
-        if search_row == 0:  # Top row.
-            threshold_y *= -1
-        elif search_row == 1:  # Middle row.
-            threshold_y = 0
+        # Calculate thresholds based on direction.
+        threshold_x = self.get_real_threshold(search_column)
+        threshold_y = self.get_real_threshold(search_row)
 
         # Diagonal search.
         if self.config["search_dir"] % 2 == 0:
@@ -249,16 +237,18 @@ class PDFProcessor:
         ]
 
         # Search for a free slot using the selected direction.
-        search_x0 = rect.x0 + threshold_x
-        search_y0 = rect.y0 + threshold_y
-        search_x1 = rect.x1 + threshold_x
-        search_y1 = rect.y1 + threshold_y
+        search_rect = pymupdf.Rect(
+            rect.x0 + threshold_x,
+            rect.y0 + threshold_y,
+            rect.x1 + threshold_x,
+            rect.y1 + threshold_y,
+        )
+
         while not self.is_out_of_bounds(
-            search_x0, search_x1, br.x, self.config["margin_x"]
+            search_rect.x0, search_rect.x1, br.x, self.config["margin_x"]
         ) and not self.is_out_of_bounds(
-            search_y0, search_y1, br.y, self.config["margin_y"]
+            search_rect.y0, search_rect.y1, br.y, self.config["margin_y"]
         ):
-            search_rect = pymupdf.Rect(search_x0, search_y0, search_x1, search_y1)
 
             collide = next(
                 (word for word in word_rects if search_rect.intersects(word)), None
@@ -268,36 +258,12 @@ class PDFProcessor:
             if not collide:
                 return search_rect
 
-            # Searching a cardinal direction.
-            if self.config["search_dir"] == 1:
-                # Searching up.
-                search_x0 += threshold_x
-                search_x1 += threshold_x
-                search_y0 = search_y0 - stamp_size[1]
-                search_y1 = collide.y0 - self.config["threshold"]
-            elif self.config["search_dir"] == 3:
-                # Searching left.
-                search_x0 = search_x0 - stamp_size[0]
-                search_x1 = collide.x0 - self.config["threshold"]
-                search_y0 += threshold_y
-                search_y1 += threshold_y
-            elif self.config["search_dir"] == 5:
-                # Searching right.
-                search_x0 = collide.x1 + self.config["threshold"]
-                search_x1 = search_x0 + stamp_size[0]
-                search_y0 += threshold_y
-                search_y1 += threshold_y
-            elif self.config["search_dir"] == 7:
-                # Searching down.
-                search_x0 += threshold_x
-                search_x1 += threshold_x
-                search_y0 = collide.y1 + self.config["threshold"]
-                search_y1 = search_y0 + stamp_size[1]
-            else:
-                search_x0 += threshold_x
-                search_x1 += threshold_x
-                search_y0 += threshold_y
-                search_y1 += threshold_y
+            # Calculate new search rect positions.
+            (search_rect.x0, search_rect.y0, search_rect.x1, search_rect.y1) = (
+                self.calc_rect_pos(
+                    search_rect, collide, [threshold_x, threshold_y], stamp_size
+                )
+            )
 
         # No spot found, return the original.
         return rect
@@ -422,3 +388,69 @@ class PDFProcessor:
 
         # Last area.
         return (end_position - margin - stamp_size, end_position - margin)
+
+    def get_real_threshold(self, search_dir):
+        """
+        Applies the direction to the threshold value.
+
+        Args:
+            search_dir (int): The direction of search based off a 3x3 grid.
+        """
+        if search_dir == 0:  # First area.
+            return self.config["threshold"] * -1
+        if search_dir == 1:  # Middle area.
+            return 0
+
+        # Last area.
+        return self.config["threshold"]
+
+    def calc_rect_pos(self, search_rect, collide, thresholds, stamp_size):
+        """
+        Calculates the next position for the rect based on the search_dir.
+
+        Args:
+            search_rect (pymupdf.Rect): The current search rect.
+            collide (pymupdf.Rect): The collided item's rect.
+            thresholds (List[int]): A list that contains the x/y thresholds.
+            stamp_size (List[float]): A list that contains stamp width/height.
+        """
+        if self.config["search_dir"] == 1:
+            # Searching up.
+            return (
+                search_rect.x0,
+                collide.y0 + thresholds[1] - stamp_size[1],
+                search_rect.x1,
+                collide.y0 + thresholds[1],
+            )
+        if self.config["search_dir"] == 3:
+            # Searching left.
+            return (
+                collide.x0 + thresholds[0] - stamp_size[0],
+                search_rect.y0,
+                collide.x0 + thresholds[0],
+                search_rect.y1,
+            )
+        if self.config["search_dir"] == 5:
+            # Searching right.
+            return (
+                collide.x1 + thresholds[0],
+                search_rect.y0,
+                collide.x1 + thresholds[0] + stamp_size[0],
+                search_rect.y1,
+            )
+        if self.config["search_dir"] == 7:
+            # Searching down.
+            return (
+                search_rect.x0,
+                collide.y1 + thresholds[1],
+                search_rect.x1,
+                collide.y1 + thresholds[1] + stamp_size[1],
+            )
+
+        # Diagonal, search via threshold only.
+        return (
+            search_rect.x0 + thresholds[0],
+            search_rect.y0 + thresholds[1],
+            search_rect.x1 + thresholds[0],
+            search_rect.y1 + thresholds[1],
+        )
