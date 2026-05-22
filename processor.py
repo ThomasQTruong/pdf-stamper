@@ -165,7 +165,7 @@ class PDFProcessor:
             if self.config["threshold"] > 0:
                 if self.config["search_dir"] == 4:
                     # Search all of the directions.
-                    rect = self.search_all(page, rect)
+                    rect = self.search_all(page, rect, br, [stamp.width, stamp.height])
                 else:
                     # Search normally.
                     rect = self.search(page, rect, br, [stamp.width, stamp.height])
@@ -249,7 +249,6 @@ class PDFProcessor:
         ) and not self.is_out_of_bounds(
             search_rect.y0, search_rect.y1, br.y, self.config["margin_y"]
         ):
-
             collide = next(
                 (word for word in word_rects if search_rect.intersects(word)), None
             )
@@ -268,12 +267,14 @@ class PDFProcessor:
         # No spot found, return the original.
         return rect
 
-    def search_all(self, page, rect):
+    def search_all(self, page, rect, br, stamp_size):
         """Searches for an empty spot to stamp for both x and y axis.
 
         Args:
             page (pymupdf.Page): The document page to search on.
             rect (pymupdf.Rect): The rectangle where the stamp goes.
+            br (pymupdf.Point): The bottom-right point of the page.
+            stamp_size (list[float]): A list containing [stamp_width, stamp_height].
 
         Returns:
             pymupdf.Rect: The rect with the found position, else original rect.
@@ -282,13 +283,9 @@ class PDFProcessor:
         if not page.get_text("text", clip=rect).strip():
             return rect
 
-        br = page.rect.br
-        stamp_width = rect.x1 - rect.x0
-        stamp_height = rect.y1 - rect.y0
-
         # Start from the top-left corner.
         search_y0 = self.config["margin_y"]
-        search_y1 = search_y0 + stamp_height
+        search_y1 = search_y0 + stamp_size[1]
 
         # Extract the positions from the word and make a rect with it.
         word_rects = [
@@ -300,7 +297,7 @@ class PDFProcessor:
             search_y0, search_y1, br.y, self.config["margin_y"]
         ):
             search_x0 = self.config["margin_x"]
-            search_x1 = search_x0 + stamp_width
+            search_x1 = search_x0 + stamp_size[0]
 
             # While search_rect is not out of x-axis boundary.
             while not self.is_out_of_bounds(
@@ -318,7 +315,7 @@ class PDFProcessor:
 
                 # Move right by the threshold
                 search_x0 = collide.x1 + self.config["threshold"]
-                search_x1 = search_x0 + stamp_width
+                search_x1 = search_x0 + stamp_size[0]
 
             # Move down to the next row by the threshold
             search_y0 += self.config["threshold"]
@@ -369,13 +366,16 @@ class PDFProcessor:
 
     def get_start_coords(self, start_area, end_position, margin, stamp_size):
         """
-        Return coord-pair values based on the start_area.
+        Calculates the x OR y coords based on the start_area.
 
         Args:
             start_area (int): The starting area represented on a 3x3 grid.
             end_position (float): The page's end position.
             margin (float): The spacing away from the page edge.
             stamp_size (float): The 1d size of the stamp (height/width).
+
+        Returns:
+            tuple (coord0, coord1): The x OR y coords calculated.
         """
         # First area.
         if start_area == 0:
@@ -395,6 +395,10 @@ class PDFProcessor:
 
         Args:
             search_dir (int): The direction of search based off a 3x3 grid.
+
+        Returns:
+            int: The real threshold value based on the direction selected
+                (left = negative, right = positive, middle = 0).
         """
         if search_dir == 0:  # First area.
             return self.config["threshold"] * -1
@@ -413,6 +417,9 @@ class PDFProcessor:
             collide (pymupdf.Rect): The collided item's rect.
             thresholds (List[int]): A list that contains the x/y thresholds.
             stamp_size (List[float]): A list that contains stamp width/height.
+
+        Returns:
+            tuple (x0, y0, x1, y0): The new search position.
         """
         if self.config["search_dir"] == 1:
             # Searching up.
