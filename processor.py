@@ -124,32 +124,19 @@ class PDFProcessor:
 
             # Obtain page dimensions and top-left values.
             br = page.rect.br
-            x0 = self.config["margin_x"]
-            y0 = self.config["margin_y"]
-            x1 = x0 + stamp.width
-            y1 = y0 + stamp.height
-            start_row = int(self.config["start_pos"] / 3)
-            start_column = self.config["start_pos"] % 3
 
-            # Set x-value based on column.
-            if start_column == 1:
-                # Middle column, center the stamp.
-                x0 = (br.x - stamp.width) / 2
-                x1 = x0 + stamp.width
-            elif start_column == 2:
-                # Right column.
-                x0 = br.x - self.config["margin_x"] - stamp.width
-                x1 = br.x - self.config["margin_x"]
+            # Get x-value based on column.
+            x0, x1 = self.get_start_coords(
+                self.config["start_pos"] % 3, br.x, self.config["margin_x"], stamp.width
+            )
 
-            # Set y-value based on row.
-            if start_row == 1:
-                # Middle row.
-                y0 = (br.y - stamp.height) / 2
-                y1 = y0 + stamp.height
-            elif start_row == 2:
-                # Bottom row.
-                y0 = br.y - self.config["margin_y"] - stamp.height
-                y1 = br.y - self.config["margin_y"]
+            # Get y-value based on row.
+            y0, y1 = self.get_start_coords(
+                int(self.config["start_pos"] / 3),
+                br.y,
+                self.config["margin_y"],
+                stamp.height,
+            )
 
             # Check margin x/y values.
             if self.is_out_of_bounds(x0, x1, br.x, self.config["margin_x"]):
@@ -185,10 +172,11 @@ class PDFProcessor:
 
             # Clean the padding off before stamping for a centered insertion.
             offset = self.config["padding"] / 2
-            clean_rect = pymupdf.Rect(
-                rect.x0 + offset, rect.y0 + offset, rect.x1 - offset, rect.y1 - offset
-            )
-            page.insert_image(clean_rect, filename=self.config["stamp_path"])
+            rect.x0 += offset
+            rect.y0 += offset
+            rect.x1 -= offset
+            rect.y1 -= offset
+            page.insert_image(rect, filename=self.config["stamp_path"])
 
         doc.save(output_pdf)
         doc.close()
@@ -206,9 +194,8 @@ class PDFProcessor:
         Returns:
             pymupdf.Rect: The rect with the found position, else original rect.
         """
-        text_in_rect = page.get_text("text", clip=rect)
         # Empty spot at the location already.
-        if not text_in_rect.strip():
+        if not page.get_text("text", clip=rect).strip():
             return rect
 
         search_row = int(self.config["search_dir"] / 3)
@@ -246,22 +233,20 @@ class PDFProcessor:
                 end_y = br.y - self.config["margin_y"] - stamp_size[1]
 
             # Calculate the hypotenuse.
-            dx = end_x - rect.x0
-            dy = end_y - rect.y0
-            distance = math.hypot(dx, dy)
+            distance = math.hypot(end_x - rect.x0, end_y - rect.y0)
 
             # No distance to move, return original.
             if distance == 0:
                 return rect
 
             # Apply to threshold.
-            threshold_x = (dx / distance) * self.config["threshold"]
-            threshold_y = (dy / distance) * self.config["threshold"]
+            threshold_x = ((end_x - rect.x0) / distance) * self.config["threshold"]
+            threshold_y = ((end_y - rect.y0) / distance) * self.config["threshold"]
 
-        # Obtain all the words in the search rect.
-        words = page.get_text("words")
         # Extract the positions from the word and make a rect with it.
-        word_rects = [pymupdf.Rect(w[:4]) for w in words if w[4].strip()]
+        word_rects = [
+            pymupdf.Rect(w[:4]) for w in page.get_text("words") if w[4].strip()
+        ]
 
         # Search for a free slot using the selected direction.
         search_x0 = rect.x0 + threshold_x
@@ -327,10 +312,10 @@ class PDFProcessor:
         Returns:
             pymupdf.Rect: The rect with the found position, else original rect.
         """
-        text_in_rect = page.get_text("text", clip=rect)
         # Empty spot at the location already.
-        if not text_in_rect.strip():
+        if not page.get_text("text", clip=rect).strip():
             return rect
+
         br = page.rect.br
         stamp_width = rect.x1 - rect.x0
         stamp_height = rect.y1 - rect.y0
@@ -339,10 +324,10 @@ class PDFProcessor:
         search_y0 = self.config["margin_y"]
         search_y1 = search_y0 + stamp_height
 
-        # Obtain all the words in the page.
-        words = page.get_text("words")
         # Extract the positions from the word and make a rect with it.
-        word_rects = [pymupdf.Rect(w[:4]) for w in words if w[4].strip()]
+        word_rects = [
+            pymupdf.Rect(w[:4]) for w in page.get_text("words") if w[4].strip()
+        ]
 
         # While search_rect is not out of y-axis boundary.
         while not self.is_out_of_bounds(
@@ -415,3 +400,25 @@ class PDFProcessor:
                 continue  # Skip corrupted PDFs
 
         return len(files) + total_pages
+
+    def get_start_coords(self, start_area, end_position, margin, stamp_size):
+        """
+        Return coord-pair values based on the start_area.
+
+        Args:
+            start_area (int): The starting area represented on a 3x3 grid.
+            end_position (float): The page's end position.
+            margin (float): The spacing away from the page edge.
+            stamp_size (float): The 1d size of the stamp (height/width).
+        """
+        # First area.
+        if start_area == 0:
+            return (margin, margin + stamp_size)
+
+        # Middle area, center the stamp.
+        if start_area == 1:
+            p0 = (end_position - stamp_size) / 2
+            return (p0, p0 + stamp_size)
+
+        # Last area.
+        return (end_position - margin - stamp_size, end_position - margin)
