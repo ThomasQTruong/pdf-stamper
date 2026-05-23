@@ -14,7 +14,7 @@ from pathlib import Path
 import customtkinter as ctk
 from CTkToolTip import CTkToolTip
 from PIL import Image, ImageTk
-from processor import PDFProcessor
+from .processor import PDFProcessor
 
 
 def get_resource_path(rel_path):
@@ -798,6 +798,10 @@ class StamperApp(ctk.CTk):
             self.threshold_entry.insert(0, self.threshold)
 
 
-if __name__ == "__main__":
+def main():
     app = StamperApp()
     app.mainloop()
+
+
+if __name__ == "__main__":
+    main()

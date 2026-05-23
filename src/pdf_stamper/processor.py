@@ -2,7 +2,7 @@
 
 import math
 import pymupdf
-from stamp import Stamp
+from .stamp import Stamp
 
 
 class PDFProcessor:
