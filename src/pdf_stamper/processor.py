@@ -23,9 +23,9 @@ class PDFProcessor:
             Expected signature: func(percentage_float).
     """
 
-    def __init__(self, config, output_callback=None, progress_callback=None):
+    def __init__(self, data, output_callback=None, progress_callback=None):
         """Initializes the PDFProcessor with configuration and callbacks."""
-        self.config = config
+        self.data = data
         self.output_callback = output_callback
         self.progress_callback = progress_callback
         self.current_progress = 0
@@ -46,12 +46,12 @@ class PDFProcessor:
         error_count = 0
 
         # Open the stamp.
-        stamp = Stamp(self.config["stamp_path"], self.config["padding"])
+        stamp = Stamp(self.data.stamp, self.data.padding)
         # Stamp was unable to initialize.
         if stamp is None:
             if self.output_callback:
                 self.output_callback(
-                    f"[Error] '{self.config['stamp_path']}' is missing!", "error"
+                    f"[Error] '{self.data.stamp}' is missing!", "error"
                 )
 
         # For each pdf in the target directory.
@@ -127,32 +127,32 @@ class PDFProcessor:
 
             # Get x-value based on column.
             x0, x1 = self.get_start_coords(
-                self.config["start_pos"] % 3, br.x, self.config["margin_x"], stamp.width
+                self.data.start_pos % 3, br.x, self.data.margin_x, stamp.width
             )
 
             # Get y-value based on row.
             y0, y1 = self.get_start_coords(
-                int(self.config["start_pos"] / 3),
+                int(self.data.start_pos / 3),
                 br.y,
-                self.config["margin_y"],
+                self.data.margin_y,
                 stamp.height,
             )
 
             # Check margin x/y values.
-            if self.is_out_of_bounds(x0, x1, br.x, self.config["margin_x"]):
+            if self.is_out_of_bounds(x0, x1, br.x, self.data.margin_x):
                 if self.output_callback:
                     self.output_callback(
-                        f"[Skipped] Out of Bounds: marginX ({self.config['margin_x']})"
+                        f"[Skipped] Out of Bounds: marginX ({self.data.margin_x})"
                         f" or stamp width ({stamp.width}) is too high for"
                         + f" the page width ({br.x})!",
                         "warning",
                     )
                 doc.close()
                 return 2
-            if self.is_out_of_bounds(y0, y1, br.y, self.config["margin_y"]):
+            if self.is_out_of_bounds(y0, y1, br.y, self.data.margin_y):
                 if self.output_callback:
                     self.output_callback(
-                        f"[Skipped] Out of Bounds: marginY ({self.config['margin_y']})"
+                        f"[Skipped] Out of Bounds: marginY ({self.data.margin_y})"
                         + f" or stamp height ({stamp.height}) is too high for"
                         + f" the page height ({br.y})!",
                         "warning",
@@ -162,8 +162,8 @@ class PDFProcessor:
 
             rect = pymupdf.Rect(x0, y0, x1, y1)
             # Search is enabled.
-            if self.config["threshold"] > 0:
-                if self.config["search_dir"] == 4:
+            if self.data.threshold > 0:
+                if self.data.search_dir == 4:
                     # Search all of the directions.
                     rect = self.search_all(page, rect, br, [stamp.width, stamp.height])
                 else:
@@ -171,9 +171,9 @@ class PDFProcessor:
                     rect = self.search(page, rect, br, [stamp.width, stamp.height])
 
             # Clean the padding off before stamping for a centered insertion.
-            offset = self.config["padding"] / 2
+            offset = self.data.padding / 2
             rect += (offset, offset, -offset, -offset)
-            page.insert_image(rect, filename=self.config["stamp_path"])
+            page.insert_image(rect, filename=self.data.stamp)
 
         doc.save(output_pdf)
         doc.close()
@@ -195,30 +195,30 @@ class PDFProcessor:
         if not page.get_text("text", clip=rect).strip():
             return rect
 
-        search_column = self.config["search_dir"] % 3
-        search_row = int(self.config["search_dir"] / 3)
+        search_column = self.data.search_dir % 3
+        search_row = int(self.data.search_dir / 3)
 
         # Calculate thresholds based on direction.
         threshold_x = self.get_real_threshold(search_column)
         threshold_y = self.get_real_threshold(search_row)
 
         # Diagonal search.
-        if self.config["search_dir"] % 2 == 0:
+        if self.data.search_dir % 2 == 0:
             # Figure out the end point.
-            end_x = self.config["margin_x"]
-            end_y = self.config["margin_y"]
+            end_x = self.data.margin_x
+            end_y = self.data.margin_y
             if search_column == 1:
                 # Middle column.
                 end_x = rect.x0
             elif search_column == 2:
                 # Right column.
-                end_x = br.x - self.config["margin_x"] - stamp_size[0]
+                end_x = br.x - self.data.margin_x - stamp_size[0]
 
             if search_row == 1:
                 end_y = rect.y0
             elif search_row == 2:
                 # Bottom row.
-                end_y = br.y - self.config["margin_y"] - stamp_size[1]
+                end_y = br.y - self.data.margin_y - stamp_size[1]
 
             # Calculate the hypotenuse.
             distance = math.hypot(end_x - rect.x0, end_y - rect.y0)
@@ -228,8 +228,8 @@ class PDFProcessor:
                 return rect
 
             # Apply to threshold.
-            threshold_x = ((end_x - rect.x0) / distance) * self.config["threshold"]
-            threshold_y = ((end_y - rect.y0) / distance) * self.config["threshold"]
+            threshold_x = ((end_x - rect.x0) / distance) * self.data.threshold
+            threshold_y = ((end_y - rect.y0) / distance) * self.data.threshold
 
         # Extract the positions from the word and make a rect with it.
         word_rects = [
@@ -245,9 +245,9 @@ class PDFProcessor:
         )
 
         while not self.is_out_of_bounds(
-            search_rect.x0, search_rect.x1, br.x, self.config["margin_x"]
+            search_rect.x0, search_rect.x1, br.x, self.data.margin_x
         ) and not self.is_out_of_bounds(
-            search_rect.y0, search_rect.y1, br.y, self.config["margin_y"]
+            search_rect.y0, search_rect.y1, br.y, self.data.margin_y
         ):
             collide = next(
                 (word for word in word_rects if search_rect.intersects(word)), None
@@ -284,7 +284,7 @@ class PDFProcessor:
             return rect
 
         # Start from the top-left corner.
-        search_y0 = self.config["margin_y"]
+        search_y0 = self.data.margin_y
         search_y1 = search_y0 + stamp_size[1]
 
         # Extract the positions from the word and make a rect with it.
@@ -293,15 +293,13 @@ class PDFProcessor:
         ]
 
         # While search_rect is not out of y-axis boundary.
-        while not self.is_out_of_bounds(
-            search_y0, search_y1, br.y, self.config["margin_y"]
-        ):
-            search_x0 = self.config["margin_x"]
+        while not self.is_out_of_bounds(search_y0, search_y1, br.y, self.data.margin_y):
+            search_x0 = self.data.margin_x
             search_x1 = search_x0 + stamp_size[0]
 
             # While search_rect is not out of x-axis boundary.
             while not self.is_out_of_bounds(
-                search_x0, search_x1, br.x, self.config["margin_x"]
+                search_x0, search_x1, br.x, self.data.margin_x
             ):
                 # Create the rectangle for the current test spot.
                 search_rect = pymupdf.Rect(search_x0, search_y0, search_x1, search_y1)
@@ -314,12 +312,12 @@ class PDFProcessor:
                     return search_rect
 
                 # Move right by the threshold
-                search_x0 = collide.x1 + self.config["threshold"]
+                search_x0 = collide.x1 + self.data.threshold
                 search_x1 = search_x0 + stamp_size[0]
 
             # Move down to the next row by the threshold
-            search_y0 += self.config["threshold"]
-            search_y1 += self.config["threshold"]
+            search_y0 += self.data.threshold
+            search_y1 += self.data.threshold
 
         # No spot found, return original.
         return rect
@@ -401,12 +399,12 @@ class PDFProcessor:
                 (left = negative, right = positive, middle = 0).
         """
         if search_dir == 0:  # First area.
-            return self.config["threshold"] * -1
+            return self.data.threshold * -1
         if search_dir == 1:  # Middle area.
             return 0
 
         # Last area.
-        return self.config["threshold"]
+        return self.data.threshold
 
     def calc_rect_pos(self, search_rect, collide, thresholds, stamp_size):
         """
@@ -421,7 +419,7 @@ class PDFProcessor:
         Returns:
             tuple (x0, y0, x1, y0): The new search position.
         """
-        if self.config["search_dir"] == 1:
+        if self.data.search_dir == 1:
             # Searching up.
             return (
                 search_rect.x0,
@@ -429,7 +427,7 @@ class PDFProcessor:
                 search_rect.x1,
                 collide.y0 + thresholds[1],
             )
-        if self.config["search_dir"] == 3:
+        if self.data.search_dir == 3:
             # Searching left.
             return (
                 collide.x0 + thresholds[0] - stamp_size[0],
@@ -437,7 +435,7 @@ class PDFProcessor:
                 collide.x0 + thresholds[0],
                 search_rect.y1,
             )
-        if self.config["search_dir"] == 5:
+        if self.data.search_dir == 5:
             # Searching right.
             return (
                 collide.x1 + thresholds[0],
@@ -445,7 +443,7 @@ class PDFProcessor:
                 collide.x1 + thresholds[0] + stamp_size[0],
                 search_rect.y1,
             )
-        if self.config["search_dir"] == 7:
+        if self.data.search_dir == 7:
             # Searching down.
             return (
                 search_rect.x0,

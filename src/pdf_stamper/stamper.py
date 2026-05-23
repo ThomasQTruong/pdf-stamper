@@ -532,18 +532,9 @@ class StamperApp(ctk.CTk):
           output_dir (Path): The output directory's path.
           append_value (str): The value to append to the file name.
         """
-        config = {
-            "stamp_path": self.data.stamp,
-            "padding": self.data.padding,
-            "margin_x": self.data.margin_x,
-            "margin_y": self.data.margin_y,
-            "threshold": self.data.threshold,
-            "start_pos": self.data.start_pos,
-            "search_dir": self.data.search_dir,
-        }
 
         processor = PDFProcessor(
-            config,
+            self.data,
             output_callback=self.send_output,
             progress_callback=lambda p: self.after(0, lambda: self.progress_bar.set(p)),
         )
