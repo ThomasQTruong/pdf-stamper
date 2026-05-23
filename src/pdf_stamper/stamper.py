@@ -5,7 +5,6 @@ all files with a specified stamp file and outputs it into a specified
 output directory.
 """
 
-import json
 import os
 import sys
 import threading
@@ -15,6 +14,7 @@ import customtkinter as ctk
 from CTkToolTip import CTkToolTip
 from PIL import Image, ImageTk
 from .processor import PDFProcessor
+from .data import Data
 
 
 def get_resource_path(rel_path):
@@ -77,13 +77,6 @@ class StamperApp(ctk.CTk):
     DEFAULT_STAMP_PATH = "stamp.png"
 
     # App settings.
-    stamp = None
-    padding = 20
-    margin_x = 20
-    margin_y = 20
-    threshold = 1
-    start_pos = 8  # Starting position, default: bottom right (3x3 grid index).
-    search_dir = 1  # Search direction, default: upwards (3x3 grid index).
     progress = 0  # The progress of the app.
 
     def __init__(self):
@@ -98,6 +91,7 @@ class StamperApp(ctk.CTk):
         self.after(200, self.set_app_icon)  # Set the app icon.
 
         # Data storage.
+        self.data = Data()
         self.stamp_path_entry = None
         self.input_dir_entry = None
         self.output_dir_entry = None
@@ -127,8 +121,8 @@ class StamperApp(ctk.CTk):
         self.stamper_output.tag_config("warning", foreground="#cf8b0c")  # Orange
         self.stamper_output.tag_config("success", foreground="#3e9b59")  # Green
 
-        # Load settings.
-        self.load_config()
+        # Populate UI with loaded settings.
+        self.populate_ui()
 
     def set_app_icon(self):
         """Sets the app icon."""
@@ -392,7 +386,7 @@ class StamperApp(ctk.CTk):
                 )
 
                 CTkToolTip(pos_button, pos_tooltip)
-        self.pos_buttons[self.start_pos].configure(
+        self.pos_buttons[self.data.start_pos].configure(
             fg_color=ctk.ThemeManager.theme["CTkButton"]["fg_color"]
         )
 
@@ -426,7 +420,7 @@ class StamperApp(ctk.CTk):
                     + "to stamp.\nthreshold = 0 to turn off search",
                 )
         # Default search: upwards.
-        self.dir_buttons[self.search_dir].configure(
+        self.dir_buttons[self.data.search_dir].configure(
             fg_color=ctk.ThemeManager.theme["CTkButton"]["fg_color"]
         )
         # Center button text.
@@ -472,50 +466,51 @@ class StamperApp(ctk.CTk):
         # Clear the output.
         self.clear_output()
         # Grab values from entries.
-        self.stamp = Path(self.stamp_path_entry.get())
-        input_dir = Path(self.input_dir_entry.get())
-        output_dir = Path(self.output_dir_entry.get())
-        append_value = self.append_entry.get()
-        self.padding = self.padding_entry.get().strip()
-        self.margin_x = self.margin_x_entry.get().strip()
-        self.margin_y = self.margin_y_entry.get().strip()
-        self.threshold = self.threshold_entry.get().strip()
+        self.data.stamp = Path(self.stamp_path_entry.get())
+        self.data.input_dir = Path(self.input_dir_entry.get())
+        self.data.output_dir = Path(self.output_dir_entry.get())
+        self.data.append = self.append_entry.get()
+        self.data.padding = self.padding_entry.get().strip()
+        self.data.margin_x = self.margin_x_entry.get().strip()
+        self.data.margin_y = self.margin_y_entry.get().strip()
+        self.data.threshold = self.threshold_entry.get().strip()
         # Validate values.
-        if self.padding == "":
-            self.padding = 0
+        if self.data.padding == "":
+            self.data.padding = 0
             self.edit_entry(self.padding_entry, "0")
-        if self.margin_x == "":
-            self.margin_x = 0
+        if self.data.margin_x == "":
+            self.data.margin_x = 0
             self.edit_entry(self.margin_x_entry, "0")
-        if self.margin_y == "":
-            self.margin_y = 0
+        if self.data.margin_y == "":
+            self.data.margin_y = 0
             self.edit_entry(self.margin_y_entry, "0")
-        if self.threshold == "":
-            self.threshold = 0
+        if self.data.threshold == "":
+            self.data.threshold = 0
             self.edit_entry(self.threshold_entry, "0")
 
         try:
-            self.padding = float(self.padding)
-            self.margin_x = float(self.margin_x)
-            self.margin_y = float(self.margin_y)
-            self.threshold = int(self.threshold)
+            self.data.padding = float(self.data.padding)
+            self.data.margin_x = float(self.data.margin_x)
+            self.data.margin_y = float(self.data.margin_y)
+            self.data.threshold = int(self.data.threshold)
         except ValueError:
             self.send_output(
-                f"[ERROR] padding: {self.padding}, marginX: "
-                + f"{self.margin_x}, marginY: {self.margin_y}, "
-                + f"or threshold: {self.threshold} is invalid.",
+                f"[ERROR] padding: {self.data.padding}, marginX: "
+                + f"{self.data.margin_x}, marginY: {self.data.margin_y}, "
+                + f"or threshold: {self.data.threshold} is invalid.",
                 "error",
             )
             return
 
-        if not input_dir.exists():
+        if not self.data.input_dir.exists():
             self.send_output(
-                f"[ERROR] '{input_dir.name}' directory cant be found.", "error"
+                f"[ERROR] '{self.data.input_dir.name}' directory cant be found.",
+                "error",
             )
             return
 
         # Save the settings locally to a json file.
-        self.save_config()
+        self.data.save_config()
 
         # Lock the button so the user can't press until the process is done.
         self.start_btn.configure(state="disabled")
@@ -523,7 +518,7 @@ class StamperApp(ctk.CTk):
         # Run the program using a thread.
         thread = threading.Thread(
             target=self.run_stamper_thread,
-            args=(input_dir, output_dir, append_value),
+            args=(self.data.input_dir, self.data.output_dir, self.data.append),
             daemon=True,
         )
         thread.start()
@@ -538,13 +533,13 @@ class StamperApp(ctk.CTk):
           append_value (str): The value to append to the file name.
         """
         config = {
-            "stamp_path": self.stamp,
-            "padding": self.padding,
-            "margin_x": self.margin_x,
-            "margin_y": self.margin_y,
-            "threshold": self.threshold,
-            "start_pos": self.start_pos,
-            "search_dir": self.search_dir,
+            "stamp_path": self.data.stamp,
+            "padding": self.data.padding,
+            "margin_x": self.data.margin_x,
+            "margin_y": self.data.margin_y,
+            "threshold": self.data.threshold,
+            "start_pos": self.data.start_pos,
+            "search_dir": self.data.search_dir,
         }
 
         processor = PDFProcessor(
@@ -704,7 +699,7 @@ class StamperApp(ctk.CTk):
             button.configure(fg_color="gray")
 
         clicked_button.configure(fg_color=default_blue)
-        self.start_pos = clicked_button.index
+        self.data.start_pos = clicked_button.index
 
     def update_dir_selection(self, clicked_button):
         """
@@ -720,85 +715,22 @@ class StamperApp(ctk.CTk):
             button.configure(fg_color="gray")
 
         clicked_button.configure(fg_color=default_blue)
-        self.search_dir = clicked_button.index
+        self.data.search_dir = clicked_button.index
 
-    def save_config(self):
-        """Saves the current settings to a json file."""
-        data = {
-            "stamp_path": self.stamp_path_entry.get(),
-            "input_dir": self.input_dir_entry.get(),
-            "output_dir": self.output_dir_entry.get(),
-            "append": self.append_entry.get(),
-            "padding": self.padding,
-            "marginX": self.margin_x,
-            "marginY": self.margin_y,
-            "threshold": self.threshold,
-            "start_pos": self.start_pos,
-            "search_dir": self.search_dir,
-        }
-        with open("stamper-config.json", "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4)
-
-    def load_config(self):
-        """Loads the json config file."""
-        try:
-            with open("stamper-config.json", "r", encoding="utf-8") as f:
-                settings = json.load(f)
-
-                # Update the entry boxes.
-                self.edit_entry(
-                    self.stamp_path_entry,
-                    settings.get("stamp_path", Path.cwd() / self.DEFAULT_STAMP_PATH),
-                )
-                self.edit_entry(
-                    self.input_dir_entry,
-                    settings.get("input_dir", Path.cwd() / self.DEFAULT_INPUT_DIR),
-                )
-                self.edit_entry(
-                    self.output_dir_entry,
-                    settings.get("output_dir", Path.cwd() / self.DEFAULT_OUTPUT_DIR),
-                )
-
-                # Load append value.
-                append_value = settings.get("append", "")
-                if append_value != "":
-                    self.append_entry.insert(0, append_value)
-
-                # Load padding.
-                self.padding = settings.get("padding", self.padding)
-                self.padding_entry.insert(0, self.padding)
-
-                # Load margin X.
-                self.margin_x = settings.get("marginX", self.margin_x)
-                self.margin_x_entry.insert(0, self.margin_x)
-
-                # Load margin Y.
-                self.margin_y = settings.get("marginY", self.margin_y)
-                self.margin_y_entry.insert(0, self.margin_y)
-
-                # Load threshold.
-                self.threshold = settings.get("threshold", self.threshold)
-                self.threshold_entry.insert(0, self.threshold)
-
-                # Load and update start position.
-                self.start_pos = settings.get("start_pos", self.start_pos)
-                self.update_pos_selection(self.pos_buttons[self.start_pos])
-
-                # Load and update search direction.
-                self.search_dir = settings.get("search_dir", self.search_dir)
-                self.update_dir_selection(self.dir_buttons[self.search_dir])
-        except FileNotFoundError:
-            # First time running, no settings yet, set default.
-            self.stamp_path_entry.insert(0, Path.cwd() / self.DEFAULT_STAMP_PATH)
-            self.input_dir_entry.insert(0, Path.cwd() / self.DEFAULT_INPUT_DIR)
-            self.output_dir_entry.insert(0, Path.cwd() / self.DEFAULT_OUTPUT_DIR)
-            self.padding_entry.insert(0, self.padding)
-            self.margin_x_entry.insert(0, self.margin_x)
-            self.margin_y_entry.insert(0, self.margin_y)
-            self.threshold_entry.insert(0, self.threshold)
+    def populate_ui(self):
+        """Populates the UI entries with the current data settings."""
+        self.edit_entry(self.stamp_path_entry, str(self.data.stamp))
+        self.edit_entry(self.input_dir_entry, str(self.data.input_dir))
+        self.edit_entry(self.output_dir_entry, str(self.data.output_dir))
+        self.edit_entry(self.append_entry, self.data.append)
+        self.edit_entry(self.padding_entry, str(self.data.padding))
+        self.edit_entry(self.margin_x_entry, str(self.data.margin_x))
+        self.edit_entry(self.margin_y_entry, str(self.data.margin_y))
+        self.edit_entry(self.threshold_entry, str(self.data.threshold))
 
 
 def main():
+    """The stamper program."""
     app = StamperApp()
     app.mainloop()
 
