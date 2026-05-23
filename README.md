@@ -8,11 +8,17 @@ Mass stamps files in a specified folder with a specified stamp img.
 
 # Requirements
 
-- Only needed for development.
+- Only needed for development; not needed for regular users.
 - Python >= 3.9
-- ```bash
-     pip install -r requirements.txt
-  ```
+- For program development.
+  - ```bash
+      pip install -e .
+    ```
+
+- For compiling into `.exe` and testing.
+  - ```bash
+      pip install -e .[dev]
+    ```
 
 # How To use (GUI - [stamper.py](stamper.py))
 
