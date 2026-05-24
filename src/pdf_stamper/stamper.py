@@ -466,7 +466,7 @@ class StamperApp(ctk.CTk):
         # Clear the output.
         self.clear_output()
         # Grab values from entries.
-        self.data.stamp = Path(self.stamp_path_entry.get())
+        self.data.stamp_path = Path(self.stamp_path_entry.get())
         self.data.input_dir = Path(self.input_dir_entry.get())
         self.data.output_dir = Path(self.output_dir_entry.get())
         self.data.append = self.append_entry.get()
@@ -710,7 +710,7 @@ class StamperApp(ctk.CTk):
 
     def populate_ui(self):
         """Populates the UI entries with the current data settings."""
-        self.edit_entry(self.stamp_path_entry, str(self.data.stamp))
+        self.edit_entry(self.stamp_path_entry, str(self.data.stamp_path))
         self.edit_entry(self.input_dir_entry, str(self.data.input_dir))
         self.edit_entry(self.output_dir_entry, str(self.data.output_dir))
         self.edit_entry(self.append_entry, self.data.append)

@@ -16,7 +16,7 @@ class Data:
     """Stores and manages stamper settings using a modern dataclass."""
 
     # File and Path Settings
-    stamp: Path = field(default_factory=lambda: Path.cwd() / "stamp.png")
+    stamp_path: Path = field(default_factory=lambda: Path.cwd() / "stamp.png")
     input_dir: Path = field(default_factory=lambda: Path.cwd() / "docs")
     output_dir: Path = field(default_factory=lambda: Path.cwd() / "output")
     append: str = ""
@@ -46,7 +46,7 @@ class Data:
                 # Update attributes. We use a mapping to handle name differences
                 # between your JSON keys (marginX) and Python attributes (margin_x).
                 mapping = {
-                    "stamp_path": "stamp",
+                    "stamp_path": "stamp_path",
                     "input_dir": "input_dir",
                     "output_dir": "output_dir",
                     "append": "append",
@@ -62,7 +62,7 @@ class Data:
                     if json_key in settings:
                         value = settings[json_key]
                         # Ensure path strings are converted back to Path objects
-                        if attr_name in ["stamp", "input_dir", "output_dir"]:
+                        if attr_name in ["stamp_path", "input_dir", "output_dir"]:
                             value = Path(value)
                         setattr(self, attr_name, value)
         except (json.JSONDecodeError, OSError) as e:
@@ -72,7 +72,7 @@ class Data:
         """Saves the current settings to a json file."""
         # We manually build the dict to keep your specific JSON key names (like marginX)
         data = {
-            "stamp_path": str(self.stamp),
+            "stamp_path": str(self.stamp_path),
             "input_dir": str(self.input_dir),
             "output_dir": str(self.output_dir),
             "append": self.append,
