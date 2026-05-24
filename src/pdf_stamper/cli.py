@@ -7,8 +7,8 @@ to mass-stamp PDFs from the terminal using command-line arguments.
 import argparse
 import sys
 from pathlib import Path
-from .processor import PDFProcessor
-from .data import Data
+from pdf_stamper.processor import PDFProcessor
+from pdf_stamper.data import Data
 
 
 def main():

@@ -2,7 +2,7 @@
 
 import math
 import pymupdf
-from .stamp import Stamp
+from pdf_stamper.stamp import Stamp
 
 
 class PDFProcessor:
@@ -460,4 +460,3 @@ class PDFProcessor:
             search_rect.x1 + thresholds[0],
             search_rect.y1 + thresholds[1],
         )
-

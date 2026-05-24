@@ -11,16 +11,12 @@ Mass stamps files in a specified folder with a specified stamp img.
 - Only needed for development; not needed for regular users.
 - Python >= 3.9
 - For program development.
-  - ```bash
-      pip install -e .
-    ```
+  - `make install` OR `pip install -e .`
 
 - For compiling into `.exe` and testing.
-  - ```bash
-      pip install -e .[dev]
-    ```
+  - `make install-dev` OR `pip install -e .[dev]`
 
-# How To use (GUI - [stamper.py](stamper.py))
+# How To use (GUI - [stamper.py](src/pdf_stamper/stamper.py))
 
 1. Download from the [releases](https://github.com/ThomasQTruong/pdf-stamper/releases).
 2. Open the program.
@@ -46,19 +42,49 @@ Mass stamps files in a specified folder with a specified stamp img.
    - <img src=".assets/docs/stamper-output.png" width="300" title="PDF Stamper Output">
    - <img src=".assets/docs/stamped-example.png" width="300" title="PDF Stamped">
 
-# Generate Windows .EXE
+# How to use (CLI - [cli.py](src/pdf_stamper/cli.py))
 
-- Multi-liner
-  - ```bash
-    pyinstaller --noconfirm --onefile --windowed `
-    --icon=".assets/app/icon.ico" `
-    --add-data ".assets/app/icon.png;." `
-    --add-data ".assets/app/icon.ico;." `
-    --name "PDF Stamper" `
-    stamper.py
-    ```
+1. Download from the [releases](https://github.com/ThomasQTruong/pdf-stamper/releases).
+2. Open the program via terminal:
 
-- One-liner
-  - ```bash
-    pyinstaller --noconfirm --onefile --windowed --icon=".assets/app/icon.ico" --add-data ".assets/app/icon.png;." --add-data ".assets/app/icon.ico;." --name "PDF Stamper" stamper.py
-    ```
+- Windows: `pdf-stamper-cli-win.exe --help`
+
+- Unix: `./pdf-stamper-cli-unix --help`
+
+3. Enter the command with the flags as shown under help.
+
+- i.e.: `./pdf-stamper-cli-unix --stamp stamp.png --padding 5 --margin-x 50 ...`
+
+# Generate Files
+
+#### GUI
+
+- Windows
+  - Using Makefile: `make gui`
+  - OR directly:
+    - ```bash
+      pyinstaller --noconfirm --onefile --windowed --icon=".assets/app/icon.ico" --add-data ".assets/app/icon.png$(SEP)." --add-data ".assets/app/icon.ico$(SEP)." --paths src --name "pdf-stamper-win" src/pdf_stamper/stamper.py
+      ```
+
+- Unix
+  - Using Makefile: `make gui`
+  - OR directly:
+    - ```bash
+      pyinstaller --noconfirm --onefile --add-data ".assets/app/icon.png$(SEP)." --hidden-import PIL._tkinter_finder --paths src --name "pdf-stamper-unix" src/pdf_stamper/stamper.py
+      ```
+
+#### CLI
+
+- Windows
+  - Using Makefile: `make cli`
+  - OR directly:
+    - ```bash
+      pyinstaller --noconfirm --onefile --paths src --name "pdf-stamper-cli-win" src/pdf_stamper/cli.py
+      ```
+
+- Unix
+  - Using Makefile: `make cli`
+  - OR directly:
+    - ```bash
+      pyinstaller --noconfirm --onefile --paths src --name "pdf-stamper-cli-unix" src/pdf_stamper/cli.py
+      ```

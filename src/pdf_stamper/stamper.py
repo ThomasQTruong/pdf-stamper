@@ -13,8 +13,8 @@ from pathlib import Path
 import customtkinter as ctk
 from CTkToolTip import CTkToolTip
 from PIL import Image, ImageTk
-from .processor import PDFProcessor
-from .data import Data
+from pdf_stamper.processor import PDFProcessor
+from pdf_stamper.data import Data
 
 
 def get_resource_path(rel_path):
@@ -66,7 +66,7 @@ class StamperApp(ctk.CTk):
     """
 
     # App constants.
-    VERSION = "2.0.0"
+    VERSION = "3.0.0"
     FONT_FAMILY = "Segoe UI"
     SECTION_FONT = (FONT_FAMILY, 18, "bold")
     LABEL_FONT = (FONT_FAMILY, 16)  # Single-line.
