@@ -79,12 +79,12 @@ Mass stamps files in a specified folder with a specified stamp img.
   - Using Makefile: `make cli`
   - OR directly:
     - ```bash
-      pyinstaller --noconfirm --onefile --paths src --name "pdf-stamper-cli-win" src/pdf_stamper/cli.py
+      pyinstaller --icon=".assets/app/icon.ico" --add-data ".assets/app/icon.png$(SEP)." --add-data ".assets/app/icon.ico$(SEP)." --noconfirm --onefile --paths src --name "pdf-stamper-cli-win" src/pdf_stamper/cli.py
       ```
 
 - Unix
   - Using Makefile: `make cli`
   - OR directly:
     - ```bash
-      pyinstaller --noconfirm --onefile --paths src --name "pdf-stamper-cli-unix" src/pdf_stamper/cli.py
+      pyinstaller --add-data ".assets/app/icon.png$(SEP)." --hidden-import PIL._tkinter_finder --noconfirm --onefile --paths src --name "pdf-stamper-cli-unix" src/pdf_stamper/cli.py
       ```

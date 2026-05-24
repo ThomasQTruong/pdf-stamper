@@ -40,10 +40,15 @@ endif
 cli:
 ifeq ($(OS),Windows_NT)
 	pyinstaller --noconfirm --onefile \
+		--icon=".assets/app/icon.ico" \
+		--add-data ".assets/app/icon.png$(SEP)." \
+		--add-data ".assets/app/icon.ico$(SEP)." \
 		--paths src \
 		--name "pdf-stamper-cli-win" src/pdf_stamper/cli.py
 else
 	pyinstaller --noconfirm --onefile \
+		--add-data ".assets/app/icon.png$(SEP)." \
+		--hidden-import PIL._tkinter_finder \
 		--paths src \
 		--name "pdf-stamper-cli-unix" src/pdf_stamper/cli.py
 endif
