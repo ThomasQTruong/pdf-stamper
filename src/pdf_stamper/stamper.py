@@ -26,6 +26,7 @@ def get_resource_path(rel_path):
     return os.path.join(base_path, rel_path)
 
 
+# pylint: disable=too-many-instance-attributes
 class StamperApp(ctk.CTk):
     """
     A CustomTkinter-based GUI application for mass-stamping pdf files.
@@ -34,31 +35,34 @@ class StamperApp(ctk.CTk):
     and handles the file renaming logic with a visual progress bar.
 
     Attributes:
-      stamp_path_entry (ctk.CTkEntry): Display, shows the selected stamp file
-          path (default: ./stamp.png).
-      input_dir_entry (ctk.CTkEntry): Display, shows the selected input directory
-          (default: ./docs/).
-      output_dir_entry (ctk.CTkEntry): Input field, the directory to output the
-          stamped file to (default: ./output/).
-      append_entry (ctk.CTkEntry): Input field, the string to append to the output
-          file.
-      padding_entry (ctk.CTkEntry): Input field, the x/y axis spacing between
-          the stamp and the page's texts.
-      margin_x_entry (ctk.CTkEntry): Input field, the x-axis spacing of the stamp
-          away from the page left/right edges.
-      margin_y_entry (ctk.CTkEntry): Input field, the y-axis spacing of the stamp
-          away from the page top/bottom edges.
-      threshold_entry (ctk.CTkEntry): Input field, the search threshold for
-          finding a whitespace to stamp (default: 1, disable = 0).
-      pos_buttons (list[ctk.CTkButton]): A collection of 9 buttons representing
-          the stamp position grid.
-      dir_buttons (list[ctk.CTkButton]): A collection of 9 buttons representing
-          the search directions grid.
-      start_btn (ctk.CTkButton): Control, triggers the renaming task.
-      progress_bar (ctk.CTkProgressBar): Display, shows the progress of the task.
-      stamper_output (ctk.CTkTextbox): Display, shows the task log warnings,
-          errors, and completion messages.
-      icon (ImageTk.PhotoImage): The app icon.
+        data (Data): Contains all the user's settings.
+        stamp_path_entry (ctk.CTkEntry): Display, shows the selected stamp file
+            path (default: ./stamp.png).
+        input_dir_entry (ctk.CTkEntry): Display, shows the selected input directory
+            (default: ./docs/).
+        output_dir_entry (ctk.CTkEntry): Input field, the directory to output the
+            stamped file to (default: ./output/).
+        append_entry (ctk.CTkEntry): Input field, the string to append to the output
+            file.
+        padding_entry (ctk.CTkEntry): Input field, the x/y axis spacing between
+            the stamp and the page's texts.
+        margin_x_entry (ctk.CTkEntry): Input field, the x-axis spacing of the stamp
+            away from the page left/right edges.
+        margin_y_entry (ctk.CTkEntry): Input field, the y-axis spacing of the stamp
+            away from the page top/bottom edges.
+        threshold_entry (ctk.CTkEntry): Input field, the search threshold for
+            finding a whitespace to stamp (default: 1, disable = 0).
+        pos_buttons (list[ctk.CTkButton]): A collection of 9 buttons representing
+            the stamp position grid.
+        dir_buttons (list[ctk.CTkButton]): A collection of 9 buttons representing
+            the search directions grid.
+        start_btn (ctk.CTkButton): Control, triggers the renaming task.
+        progress_bar (ctk.CTkProgressBar): Display, shows the progress of the task.
+        stamper_output (ctk.CTkTextbox): Display, shows the task log warnings,
+            errors, and completion messages.
+        icon (ImageTk.PhotoImage): The app icon.
+        vcmd_float (str): TCL command for floating point validation.
+        vcmd_int (str): TCL command for integer validation.
     """
 
     # App constants.
@@ -72,12 +76,6 @@ class StamperApp(ctk.CTk):
     ENTRY_FONT = (FONT_FAMILY, 16)
     PAD_X = 7  # X-axis padding.
     PAD_Y = 7  # Y-axis padding.
-    DEFAULT_INPUT_DIR = "docs"
-    DEFAULT_OUTPUT_DIR = "output"
-    DEFAULT_STAMP_PATH = "stamp.png"
-
-    # App settings.
-    progress = 0  # The progress of the app.
 
     def __init__(self):
         """Initialize the application window and build the UI layout."""
@@ -189,10 +187,10 @@ class StamperApp(ctk.CTk):
             row=0, column=0, sticky="nesw", padx=self.PAD_X, pady=(self.PAD_Y, 0)
         )
         # Padding settings.
-        self.padding_label = ctk.CTkLabel(
+        padding_label = ctk.CTkLabel(
             extra_settings_frame, text="Padding:", font=self.LABEL_FONT
         )
-        self.padding_label.grid(
+        padding_label.grid(
             row=0, column=1, sticky="nesw", padx=(0, self.PAD_X), pady=(self.PAD_Y, 0)
         )
         self.padding_entry = ctk.CTkEntry(
