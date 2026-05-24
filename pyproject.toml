@@ -30,7 +30,7 @@ dev = [
 ]
 
 [project.scripts]
-pdf-stamper-cli = "pdf_stamper.stamper_CLI:main"
+pdf-stamper-cli = "pdf_stamper.cli:main"
 
 [project.gui-scripts]
 pdf-stamper = "pdf_stamper.stamper:main"

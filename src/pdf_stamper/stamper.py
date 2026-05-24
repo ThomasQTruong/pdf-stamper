@@ -502,7 +502,7 @@ class StamperApp(ctk.CTk):
 
         if not self.data.input_dir.exists():
             self.send_output(
-                f"[ERROR] '{self.data.input_dir.name}' directory cant be found.",
+                f"[ERROR] '{self.data.input_dir}' directory cant be found.",
                 "error",
             )
             return
