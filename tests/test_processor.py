@@ -8,14 +8,15 @@ To run this test:
 
 from pathlib import Path
 import pytest
-from pdf_stamper.processor import PDFProcessor  # pylint: disable=import-error
+from pdf_stamper.processor import PDFProcessor
+from pdf_stamper.data import Data
 
 
-def test_stamping_process(tmp_path):
+def test_stamping_process():
     """Tests the PDFProcessor stamping functionality using pytest."""
     # Setup paths
     input_dir = Path("docs")
-    output_dir = tmp_path / "test_output"
+    output_dir = Path.cwd() / "test_output"
     output_dir.mkdir()
     stamp_path = Path("stamp.png")
 
@@ -23,21 +24,20 @@ def test_stamping_process(tmp_path):
     if not input_dir.exists() or not stamp_path.exists():
         pytest.skip("Test resources (docs/ or stamp.png) not found.")
 
-    config = {
-        "stamp_path": stamp_path,
-        "padding": 5.0,
-        "margin_x": 50.0,
-        "margin_y": 50.0,
-        "threshold": 1,
-        "start_pos": 8,
-        "search_dir": 4,
-    }
+    data = Data()
+    data.stamp_path = stamp_path
+    data.padding = 5.0
+    data.margin_x = 50.0
+    data.margin_y = 50.0
+    data.threshold = 1
+    data.start_pos = 8
+    data.search_dir = 4
 
     processor = PDFProcessor(
-        config, output_callback=lambda m, t: None, progress_callback=lambda p: None
+        data, output_callback=lambda m, t: None, progress_callback=lambda p: None
     )
 
-    success, warning, error = processor.run(input_dir, output_dir, "_test")
+    success, _, error = processor.run(input_dir, output_dir, "_test")
 
     # Assertions: pytest checks these and reports failures
     assert success > 0, "No files were successfully stamped"

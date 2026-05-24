@@ -1,17 +1,30 @@
-from PIL import Image
+"""Stamp asset management for the PDF Stamper application.
+
+This module provides the Stamp class, which represents a stamp image asset.
+It handles loading image dimensions and calculating the total stamp size
+including user-defined padding.
+"""
+
+from dataclasses import dataclass, field
+from pathlib import Path
+from PIL import Image, UnidentifiedImageError
 
 
+@dataclass
 class Stamp:
-    def __init__(self, stamp_path, padding):
-        """Initialize the stamp and store the stamp's data."""
+    """Represents the stamp image and its calculated dimensions."""
+
+    stamp_path: Path
+    padding: float
+    width: float = field(init=False, default=0.0)
+    height: float = field(init=False, default=0.0)
+
+    def __post_init__(self):
+        """Initialize the stamp and calculate dimensions."""
         try:
-            with Image.open(stamp_path) as self.stamp:
-                self.width, self.height = self.stamp.size
-                self.width += padding * 2  # Left and right padding.
-                self.height += padding * 2  # Top and bottom padding.
-                self.padding = padding
-        except FileNotFoundError:
-            self.stamp = None
-            self.width = 0
-            self.height = 0
-            self.padding = 0
+            with Image.open(self.stamp_path) as img:
+                w, h = img.size
+                self.width = w + (self.padding * 2)  # Left and right padding.
+                self.height = h + (self.padding * 2)  # Top and bottom padding.
+        except (FileNotFoundError, UnidentifiedImageError, OSError):
+            pass

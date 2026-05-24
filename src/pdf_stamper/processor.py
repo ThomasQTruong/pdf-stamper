@@ -48,7 +48,7 @@ class PDFProcessor:
         # Open the stamp.
         stamp = Stamp(self.data.stamp_path, self.data.padding)
         # Stamp was unable to initialize.
-        if stamp.stamp is None:
+        if stamp.width == 0:
             if self.output_callback:
                 self.output_callback(
                     f"[ERROR] '{self.data.stamp_path}' is missing!", "error"
@@ -174,7 +174,7 @@ class PDFProcessor:
             # Clean the padding off before stamping for a centered insertion.
             offset = self.data.padding / 2
             rect += (offset, offset, -offset, -offset)
-            page.insert_image(rect, filename=self.data.stamp_path)
+            page.insert_image(rect, filename=stamp.stamp_path)
 
         doc.save(output_pdf)
         doc.close()
@@ -460,3 +460,4 @@ class PDFProcessor:
             search_rect.x1 + thresholds[0],
             search_rect.y1 + thresholds[1],
         )
+
