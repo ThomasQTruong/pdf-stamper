@@ -172,7 +172,7 @@ class PDFProcessor:
                     rect = self.search(page, rect, br, [stamp.width, stamp.height])
 
             # Clean the padding off before stamping for a centered insertion.
-            offset = self.data.padding / 2
+            offset = self.data.padding
             rect += (offset, offset, -offset, -offset)
             page.insert_image(rect, filename=stamp.stamp_path)
 
