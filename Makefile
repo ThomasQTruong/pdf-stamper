@@ -11,7 +11,7 @@ else
     DEL := rm -f
 endif
 
-.PHONY: install gui-win gui-unix cli clean
+.PHONY: install install-dev gui cli clean
 
 # --- Setup ---
 install:
