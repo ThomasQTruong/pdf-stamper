@@ -26,12 +26,14 @@ ifeq ($(OS),Windows_NT)
 		--icon=".assets/app/icon.ico" \
 		--add-data ".assets/app/icon.png$(SEP)." \
 		--add-data ".assets/app/icon.ico$(SEP)." \
+		--collect-all pymupdf \
 		--paths src \
 		--name "pdf-stamper-win" src/pdf_stamper/stamper.py
 else
 	pyinstaller --noconfirm --onefile \
 		--add-data ".assets/app/icon.png$(SEP)." \
 		--hidden-import PIL._tkinter_finder \
+		--collect-all pymupdf \
 		--paths src \
 		--name "pdf-stamper-unix" src/pdf_stamper/stamper.py
 endif
@@ -43,12 +45,14 @@ ifeq ($(OS),Windows_NT)
 		--icon=".assets/app/icon.ico" \
 		--add-data ".assets/app/icon.png$(SEP)." \
 		--add-data ".assets/app/icon.ico$(SEP)." \
+		--collect-all pymupdf \
 		--paths src \
 		--name "pdf-stamper-cli-win" src/pdf_stamper/cli.py
 else
 	pyinstaller --noconfirm --onefile \
 		--add-data ".assets/app/icon.png$(SEP)." \
 		--hidden-import PIL._tkinter_finder \
+		--collect-all pymupdf \
 		--paths src \
 		--name "pdf-stamper-cli-unix" src/pdf_stamper/cli.py
 endif
