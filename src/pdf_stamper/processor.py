@@ -122,6 +122,7 @@ class PDFProcessor:
 
             # PDF page indices start at 0.
             page = doc[page_num - 1]
+            page.remove_rotation()
 
             # Obtain page dimensions and top-left values.
             br = page.rect.br
@@ -174,7 +175,7 @@ class PDFProcessor:
             # Clean the padding off before stamping for a centered insertion.
             offset = self.data.padding
             rect += (offset, offset, -offset, -offset)
-            page.insert_image(rect, filename=stamp.stamp_path)
+            page.insert_image(rect, filename=stamp.stamp_path, overlay=True)
 
         doc.save(output_pdf)
         doc.close()

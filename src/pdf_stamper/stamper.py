@@ -66,7 +66,7 @@ class StamperApp(ctk.CTk):
     """
 
     # App constants.
-    VERSION = "3.0.0"
+    VERSION = "3.0.1"
     FONT_FAMILY = "Segoe UI"
     SECTION_FONT = (FONT_FAMILY, 18, "bold")
     LABEL_FONT = (FONT_FAMILY, 16)  # Single-line.
